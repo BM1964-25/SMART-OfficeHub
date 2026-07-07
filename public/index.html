@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SMART OfficeHub</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">SMART OfficeHub</p>
+        <h1 id="dashboardTitle">Mail Dashboard</h1>
+        <p class="subline" id="dashboardSubline">E-Mail-Zentrale für Posteingang, Antworten und Entwürfe</p>
+      </div>
+      <div class="topActions">
+        <button class="button secondary helpButton" type="button" id="helpButton">? Hilfe</button>
+        <a class="button secondary" href="/auth/start" id="loginLink">Mit Google verbinden</a>
+        <button class="button primary" type="button" id="refreshButton">Aktualisieren</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="notice" id="notice"></section>
+      <section class="summary" aria-label="Kennzahlen" id="summary"></section>
+
+      <nav class="workspaceTabs" id="workspaceTabs" aria-label="Arbeitsbereiche"></nav>
+
+      <section class="toolbar" aria-label="Filter">
+        <div class="tabs" id="tabs"></div>
+        <label class="search">
+          <span>Suchen</span>
+          <input id="searchInput" type="search" placeholder="Absender, Betreff, Inhalt">
+        </label>
+      </section>
+
+      <section class="content">
+        <div class="mailList" id="mailList" aria-label="E-Mail-Liste"></div>
+        <aside class="detail" id="detail" aria-label="Details"></aside>
+      </section>
+    </main>
+
+    <aside class="helpOverlay" id="helpOverlay" aria-hidden="true">
+      <div class="helpBackdrop" id="helpBackdrop"></div>
+      <section class="helpPanel" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+        <header class="helpHeader">
+          <div>
+            <p class="eyebrow">SMART OfficeHub Hilfe</p>
+            <h2 id="helpTitle">Bedienungsanleitung</h2>
+            <p class="helpSignal">Ohne KI nutzbar: Mails, Termine, Dokumente und Entwürfe funktionieren mit Google-Zugang.</p>
+          </div>
+          <button class="iconButton" type="button" id="helpCloseButton" aria-label="Hilfe schließen">×</button>
+        </header>
+
+        <label class="helpSearch">
+          <span>Hilfe durchsuchen</span>
+          <input id="helpSearchInput" type="search" placeholder="Kapitel, Begriff oder Funktion">
+        </label>
+
+        <div class="helpBody">
+          <nav class="helpNav" aria-label="Hilfekapitel">
+            <a href="#help-overview">Überblick</a>
+            <a href="#help-access">Einrichtung & Zugang</a>
+            <a href="#help-quickstart">Schnellstart</a>
+            <a href="#help-ui">Bedienoberfläche</a>
+            <a href="#help-functions">Wichtige Funktionen</a>
+            <a href="#help-workflow">Typischer Workflow</a>
+            <a href="#help-data">Eingaben & Daten</a>
+            <a href="#help-results">Ergebnisse verstehen</a>
+            <a href="#help-errors">Fehler & Lösungen</a>
+            <a href="#help-version">Version & Hinweise</a>
+          </nav>
+
+          <div class="helpContent" id="helpContent">
+            <article class="helpSection" id="help-overview">
+              <h3>Überblick</h3>
+              <p>SMART OfficeHub bündelt Gmail, Google Calendar und Gmail-Anhänge in einem lokalen Arbeitscockpit. Die App hilft beim Sichten von Mails, Erstellen oder Aktualisieren von Gmail-Entwürfen, Prüfen kommender Termine und Ordnen von Dokumentanhängen.</p>
+              <p>Die Basisfunktionen benötigen keine KI. Optional können später KI-Aufgaben wie Dokumentzusammenfassung, Mailbewertung oder Antwortoptimierung ergänzt werden.</p>
+            </article>
+
+            <article class="helpSection" id="help-access">
+              <h3>Einrichtung & Zugang</h3>
+              <h4>Lizenzschlüssel aktivieren</h4>
+              <p>Ein Lizenzschlüssel wird in Apps verwendet, die eine Lizenzprüfung besitzen. Er wird dort im Lizenz- oder Einstellungsbereich eingegeben, muss vor der produktiven Nutzung aktiviert werden und schaltet die App-Nutzung frei. In SMART OfficeHub ist aktuell noch keine Lizenzmaske eingebaut.</p>
+              <p>Der Lizenzschlüssel aktiviert nur die Nutzung der Software. Er ersetzt keinen API-Key.</p>
+              <h4>API-Key erstellen</h4>
+              <ol>
+                <li>Anthropic Console öffnen.</li>
+                <li>Konto erstellen oder einloggen.</li>
+                <li>Bereich „API Keys“ öffnen.</li>
+                <li>Neuen API-Key erstellen.</li>
+                <li>API-Key kopieren.</li>
+                <li>API-Key in der App eintragen, sofern KI-Funktionen aktiv sind.</li>
+              </ol>
+              <p>Hinweis: Ein API-Key wird häufig nur einmal vollständig angezeigt und sollte sicher gespeichert werden.</p>
+              <h4>Warum ein API-Key erforderlich ist</h4>
+              <p>Wenn eine App KI-Funktionen über die Anthropic API nutzt, verbindet der API-Key die App mit Ihrem persönlichen Anthropic-Konto. KI-Anfragen werden dadurch Ihrem Konto zugeordnet. Ohne API-Key können solche KI-Funktionen nicht ausgeführt werden.</p>
+              <h4>Warum auch bei bezahltem App-Abo ein API-Key nötig ist</h4>
+              <p>Lizenzschlüssel und API-Key erfüllen unterschiedliche Aufgaben: Der Lizenzschlüssel aktiviert die Nutzung dieser App. Er bestätigt, dass Sie berechtigt sind, die Software zu verwenden. Der API-Key verbindet die App mit Ihrem Anthropic-Konto. Er ist erforderlich, damit KI-Funktionen ausgeführt werden können. Auch bei einer bezahlten App-Lizenz wird ein eigener API-Key benötigt, weil die Nutzung der KI-Modelle technisch und abrechnungstechnisch getrennt über Anthropic erfolgt.</p>
+              <h4>Warum Anthropic verwendet wird</h4>
+              <p>Anthropic wurde gewählt, weil Claude-Modelle stark bei strukturiertem Arbeiten, Textanalyse, Zusammenfassungen und professionellen Workflows sind. Claude eignet sich gut für längere Dokumente, komplexe Eingaben und nachvollziehbare Ausgaben. Anthropic legt Wert auf Sicherheit, Zuverlässigkeit und verantwortungsvolle KI-Nutzung. Der Nutzer behält über den eigenen API-Key Kontrolle über Nutzung und Abrechnung.</p>
+            </article>
+
+            <article class="helpSection" id="help-quickstart">
+              <h3>Schnellstart</h3>
+              <ol>
+                <li>Falls vorhanden: Lizenzschlüssel im Lizenzbereich aktivieren.</li>
+                <li>Falls KI-Funktionen genutzt werden: Anthropic API-Key eintragen.</li>
+                <li>Google über „Mit Google verbinden“ autorisieren.</li>
+                <li>Posteingang laden und Arbeitsbereich wählen: Mails, Termine oder Dokumente.</li>
+                <li>Mail, Termin oder Dokument öffnen, Ergebnis prüfen und Entwurf, Status oder Analyse weiterverwenden.</li>
+              </ol>
+            </article>
+
+            <article class="helpSection" id="help-ui">
+              <h3>Bedienoberfläche</h3>
+              <p>Oben stehen Kennzahlen und die Arbeitsbereiche. „Mails“ zeigt Gmail-Nachrichten, „Termine“ zeigt Google-Calendar-Einträge aus allen sichtbaren Kalendern, „Dokumente“ zeigt Gmail-Anhänge als Arbeitsliste. Links steht die Liste, rechts der Detailbereich.</p>
+            </article>
+
+            <article class="helpSection" id="help-functions">
+              <h3>Wichtige Funktionen</h3>
+              <ul>
+                <li>Mails nach Antwortbedarf, Prüfung, Terminen, Info und Werbung sortieren.</li>
+                <li>Antwortentwürfe in Gmail erstellen oder vorhandene Entwürfe aktualisieren.</li>
+                <li>Echte Google-Calendar-Termine aus allen sichtbaren Kalendern lesen.</li>
+                <li>Gmail-Anhänge als Dokumente erfassen, typisieren und mit Status versehen.</li>
+                <li>Dokumentinhalt bei Bedarf laden und einfache Textanalyse ausführen.</li>
+              </ul>
+              <h4>Optionale KI-Aufgaben</h4>
+              <ul>
+                <li>Mail-Zusammenfassungen verfeinern.</li>
+                <li>Antwortentwürfe fachlich und sprachlich optimieren.</li>
+                <li>Dokumente zusammenfassen und Risiken, Fristen oder Beträge erkennen.</li>
+                <li>Terminvorbereitung aus Mail- und Dokumentkontext erstellen.</li>
+              </ul>
+            </article>
+
+            <article class="helpSection" id="help-workflow">
+              <h3>Typischer Workflow</h3>
+              <p>Posteingang aktualisieren, Arbeitsbereich wählen, wichtigste Einträge prüfen, vollständige Mail oder Dokumentdetails öffnen, Status setzen und bei Bedarf einen Gmail-Entwurf erstellen oder aktualisieren.</p>
+            </article>
+
+            <article class="helpSection" id="help-data">
+              <h3>Eingaben & Daten</h3>
+              <p>SMART OfficeHub liest Gmail-Nachrichten, Gmail-Entwürfe, Gmail-Anhangmetadaten und Google-Calendar-Termine. OAuth-Tokens liegen lokal im Projektordner. Dokumentstatus und Entwurfszuordnung werden aktuell in der Browsersitzung gespeichert.</p>
+            </article>
+
+            <article class="helpSection" id="help-results">
+              <h3>Ergebnisse verstehen</h3>
+              <p>Kategorien, Dokumenttypen und Prüfsignale sind Arbeitshilfen. Prüfen Sie Originalmail, Kalenderdetails und Dokumentinhalt, bevor Sie archivieren, antworten oder Fristen ableiten.</p>
+            </article>
+
+            <article class="helpSection" id="help-errors">
+              <h3>Fehler & Lösungen</h3>
+              <ul>
+                <li>Google Login funktioniert nicht: App über http://localhost:8791 öffnen, nicht als Datei.</li>
+                <li>Keine Kalendertermine: Prüfen, ob der Kalender in Google sichtbar ist und die Calendar API aktiv ist.</li>
+                <li>Keine Dokumente: Nur echte Gmail-Anhänge erscheinen im Dokumentbereich.</li>
+                <li>Dokumentanalyse leer: Der Dateityp benötigt eventuell einen Spezialparser.</li>
+              </ul>
+            </article>
+
+            <article class="helpSection" id="help-version">
+              <h3>Version & Hinweise</h3>
+              <p>Lokale SMART OfficeHub-Version für Gmail, Google Calendar und Dokumentanhänge. Die App verlässt beim Öffnen der Hilfe nicht die aktuelle Ansicht; Eingaben im Arbeitsbereich bleiben erhalten.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <script src="./app.js?v=officehub-help-20260707"></script>
+  </body>
+</html>
