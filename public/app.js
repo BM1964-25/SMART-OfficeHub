@@ -14,6 +14,12 @@ const workspaceLabels = {
   dokumente: "Dokumente",
   ki: "KI Übersicht"
 };
+const workspaceIcons = {
+  mails: "mail",
+  termine: "calendar",
+  dokumente: "file",
+  ki: "sparkles"
+};
 const workspaceMeta = {
   mails: {
     title: "Mail Dashboard",
@@ -69,6 +75,7 @@ const draftStorageKey = "smartOfficeHubDraftCreatedIds";
 const draftIdStorageKey = "smartOfficeHubDraftIds";
 const documentStatusStorageKey = "smartOfficeHubDocumentStatus";
 const anthropicApiKeyStorageKey = "smartOfficeHubAnthropicApiKey";
+const sidebarCollapsedStorageKey = "smartOfficeHubSidebarCollapsed";
 const draftCreatedIds = new Set(loadDraftCreatedIds());
 const draftIdsByEmail = loadDraftIds();
 const documentStatusByKey = loadDocumentStatus();
@@ -77,6 +84,7 @@ let anthropicApiKey = loadAnthropicApiKey();
 let anthropicKeyVisible = false;
 let anthropicConnected = false;
 let anthropicBusy = "";
+let sidebarCollapsed = localStorage.getItem(sidebarCollapsedStorageKey) === "true";
 
 const noticeEl = document.querySelector("#notice");
 const dashboardTitleEl = document.querySelector("#dashboardTitle");
@@ -84,6 +92,11 @@ const dashboardSublineEl = document.querySelector("#dashboardSubline");
 const summaryEl = document.querySelector("#summary");
 const workspaceTabsEl = document.querySelector("#workspaceTabs");
 const workspaceGuideEl = document.querySelector("#workspaceGuide");
+const sidebarCollapseButton = document.querySelector("#sidebarCollapseButton");
+const sidebarCollapseIcon = document.querySelector(".sidebarCollapseIcon");
+const backupButton = document.querySelector("#backupButton");
+const restoreButton = document.querySelector("#restoreButton");
+const restoreInput = document.querySelector("#restoreInput");
 const tabsEl = document.querySelector("#tabs");
 const listEl = document.querySelector("#mailList");
 const detailEl = document.querySelector("#detail");
@@ -102,7 +115,6 @@ const connectApiKeyButton = document.querySelector("#connectApiKeyButton");
 const verifyApiKeyButton = document.querySelector("#verifyApiKeyButton");
 const disconnectApiKeyButton = document.querySelector("#disconnectApiKeyButton");
 const apiKeyStatus = document.querySelector("#apiKeyStatus");
-const helpButton = document.querySelector("#helpButton");
 const helpOverlay = document.querySelector("#helpOverlay");
 const helpBackdrop = document.querySelector("#helpBackdrop");
 const helpCloseButton = document.querySelector("#helpCloseButton");
@@ -128,6 +140,30 @@ function hideNotice() {
   noticeEl.textContent = "";
 }
 
+function iconSvg(name) {
+  const icons = {
+    mail: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4z"></path><path d="m4 7 8 6 8-6"></path></svg>',
+    calendar: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v15H5z"></path><path d="M8 3v4"></path><path d="M16 3v4"></path><path d="M5 10h14"></path></svg>',
+    file: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"></path><path d="M14 3v5h5"></path><path d="M9 13h6"></path><path d="M9 17h6"></path></svg>',
+    sparkles: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"></path><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8z"></path></svg>',
+    panelLeftClose: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"></path><path d="M9 5v14"></path><path d="m16 10-2 2 2 2"></path></svg>',
+    panelLeftOpen: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"></path><path d="M9 5v14"></path><path d="m14 10 2 2-2 2"></path></svg>',
+    save: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5z"></path><path d="M8 4v6h8V4"></path><path d="M8 16h8"></path></svg>',
+    restore: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 3-6"></path><path d="M4 4v6h6"></path><path d="M12 8v5l3 2"></path></svg>',
+    help: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.8 9a2.4 2.4 0 0 1 4.6 1.1c0 1.8-2.4 2-2.4 4"></path><path d="M12 18h.01"></path></svg>'
+  };
+  return icons[name] || "";
+}
+
+function renderSidebarState() {
+  document.body.classList.toggle("sidebarCollapsed", sidebarCollapsed);
+  localStorage.setItem(sidebarCollapsedStorageKey, String(sidebarCollapsed));
+  sidebarCollapseButton.setAttribute("aria-label", sidebarCollapsed ? "Sidebar ausklappen" : "Sidebar einklappen");
+  sidebarCollapseButton.title = sidebarCollapsed ? "Sidebar ausklappen" : "";
+  sidebarCollapseIcon.innerHTML = iconSvg(sidebarCollapsed ? "panelLeftOpen" : "panelLeftClose");
+  sidebarCollapseButton.querySelector(".sidebarCollapseText").textContent = sidebarCollapsed ? "" : "Einklappen";
+}
+
 function openHelp() {
   if (!helpOverlay || !helpSearchInput) return;
   helpOverlay.classList.add("active");
@@ -137,11 +173,11 @@ function openHelp() {
 }
 
 function closeHelp() {
-  if (!helpOverlay || !helpButton) return;
+  if (!helpOverlay) return;
   helpOverlay.classList.remove("active");
   helpOverlay.setAttribute("aria-hidden", "true");
   document.body.classList.remove("helpOpen");
-  helpButton.focus();
+  document.querySelector("#helpButton")?.focus();
 }
 
 function filterHelp() {
@@ -360,6 +396,50 @@ function saveAnthropicApiKey(value) {
     localStorage.setItem(anthropicApiKeyStorageKey, anthropicApiKey);
   } catch {
     setApiKeyStatus("Der Browser konnte den API-Schlüssel nicht lokal speichern.", "error");
+  }
+}
+
+function exportOfficeHubBackup() {
+  const backup = {
+    app: "SMART OfficeHub",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    session: {
+      [draftStorageKey]: [...draftCreatedIds],
+      [draftIdStorageKey]: draftIdsByEmail,
+      [documentStatusStorageKey]: documentStatusByKey
+    },
+    local: {
+      [sidebarCollapsedStorageKey]: sidebarCollapsed
+    }
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `smart-officehub-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  showNotice("Datensicherung wurde als JSON erstellt.");
+}
+
+async function importOfficeHubBackup(file) {
+  if (!file) return;
+  try {
+    const backup = JSON.parse(await file.text());
+    const session = backup?.session || {};
+    if (Array.isArray(session[draftStorageKey])) {
+      sessionStorage.setItem(draftStorageKey, JSON.stringify(session[draftStorageKey]));
+    }
+    if (session[draftIdStorageKey] && typeof session[draftIdStorageKey] === "object") {
+      sessionStorage.setItem(draftIdStorageKey, JSON.stringify(session[draftIdStorageKey]));
+    }
+    if (session[documentStatusStorageKey] && typeof session[documentStatusStorageKey] === "object") {
+      sessionStorage.setItem(documentStatusStorageKey, JSON.stringify(session[documentStatusStorageKey]));
+    }
+    showNotice("Datensicherung wurde wiederhergestellt. Die Ansicht wird neu geladen.");
+    setTimeout(() => window.location.reload(), 650);
+  } catch {
+    showNotice("Die Datensicherung konnte nicht gelesen werden.", "error");
   }
 }
 
@@ -791,11 +871,24 @@ function renderWorkspaceTabs() {
   workspaceTabsEl.innerHTML = workspaceOrder
     .map((workspace) => {
       const pressed = workspace === activeWorkspace ? "true" : "false";
-      return `<button class="workspaceTab" type="button" data-workspace="${workspace}" aria-pressed="${pressed}">${workspaceLabels[workspace]} <span>${workspaceCount(workspace)}</span></button>`;
+      const label = workspaceLabels[workspace];
+      return `<button class="workspaceTab" type="button" data-workspace="${workspace}" aria-pressed="${pressed}" title="${escapeHtml(label)}">
+        <span class="workspaceIcon">${iconSvg(workspaceIcons[workspace])}</span>
+        <span class="workspaceText">${escapeHtml(label)}</span>
+        <span class="workspaceCount">${workspaceCount(workspace)}</span>
+      </button>`;
     })
-    .join("");
+    .join("") + `<button class="workspaceTab sidebarHelpTab" type="button" id="helpButton" title="Hilfe" aria-label="Hilfe öffnen">
+      <span class="workspaceIcon">${iconSvg("help")}</span>
+      <span class="workspaceText">Hilfe</span>
+      <span class="workspaceCount">?</span>
+    </button>`;
 
   workspaceTabsEl.querySelectorAll("button").forEach((button) => {
+    if (button.id === "helpButton") {
+      button.addEventListener("click", openHelp);
+      return;
+    }
     button.addEventListener("click", () => {
       activeWorkspace = button.dataset.workspace;
       activeBucket = "alle";
@@ -1732,7 +1825,17 @@ anthropicApiKeyInput?.addEventListener("input", () => {
   if (connectApiKeyButton) connectApiKeyButton.textContent = "Verbindung";
 });
 
-helpButton?.addEventListener("click", openHelp);
+sidebarCollapseButton?.addEventListener("click", () => {
+  sidebarCollapsed = !sidebarCollapsed;
+  renderSidebarState();
+});
+backupButton?.addEventListener("click", exportOfficeHubBackup);
+restoreButton?.addEventListener("click", () => restoreInput?.click());
+restoreInput?.addEventListener("change", (event) => {
+  importOfficeHubBackup(event.target.files?.[0]);
+  event.target.value = "";
+});
+
 helpCloseButton?.addEventListener("click", closeHelp);
 helpBackdrop?.addEventListener("click", closeHelp);
 helpSearchInput?.addEventListener("input", filterHelp);
@@ -1754,6 +1857,11 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 async function init() {
+  renderSidebarState();
+  const backupIcon = document.querySelector("#backupButton .sidebarActionIcon");
+  const restoreIcon = document.querySelector("#restoreButton .sidebarActionIcon");
+  if (backupIcon) backupIcon.innerHTML = iconSvg("save");
+  if (restoreIcon) restoreIcon.innerHTML = iconSvg("restore");
   renderApiKeyPanel();
   render();
   if (isFileMode()) {

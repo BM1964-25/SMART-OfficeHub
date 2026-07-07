@@ -25,6 +25,15 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overflow: hidden;
+}
+
+.appShell {
+  height: 100vh;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: var(--bg);
 }
 
 button,
@@ -38,9 +47,10 @@ textarea {
   justify-content: space-between;
   gap: 24px;
   align-items: flex-end;
-  padding: 28px clamp(18px, 4vw, 48px) 20px;
+  padding: 18px clamp(18px, 3vw, 34px) 16px;
   border-bottom: 1px solid var(--line);
   background: #fbfaf7;
+  z-index: 10;
 }
 
 .eyebrow {
@@ -61,9 +71,329 @@ textarea {
 
 h1 {
   margin: 0;
-  font-size: clamp(30px, 5vw, 52px);
+  font-size: clamp(28px, 3.6vw, 44px);
   line-height: 1;
   letter-spacing: 0;
+}
+
+h2 {
+  margin: 0;
+  font-size: clamp(24px, 2.4vw, 34px);
+  line-height: 1.08;
+  letter-spacing: 0;
+}
+
+.appBody {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  transition: grid-template-columns 180ms ease;
+}
+
+body.sidebarCollapsed .appBody {
+  grid-template-columns: 76px minmax(0, 1fr);
+}
+
+.appSidebar {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 16px;
+  padding: 18px 10px;
+  background: #1F365C;
+  color: #F8FAFC;
+}
+
+.sidebarLabel {
+  margin: 0 0 12px;
+  color: rgba(255,255,255,0.70);
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.sidebarNavBlock {
+  min-width: 0;
+}
+
+.sidebarCollapseButton {
+  min-height: 44px;
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  border: 0;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 13px 12px;
+  background: transparent;
+  color: rgba(255,255,255,0.70);
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.sidebarCollapseButton:hover {
+  background: rgba(255,255,255,0.08);
+  color: #F8FAFC;
+}
+
+.sidebarCollapseIcon,
+.workspaceIcon,
+.sidebarActionIcon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+}
+
+.sidebarCollapseIcon svg,
+.workspaceIcon svg,
+.sidebarActionIcon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sidebarActionIcon,
+.sidebarActionIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sidebarInfo {
+  display: grid;
+  align-content: end;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sidebarCard {
+  display: grid;
+  gap: 13px;
+  padding: 14px 10px;
+  border: 1px solid #d7dde6;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: var(--ink);
+}
+
+.sidebarCard h3 {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.sidebarCard p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.backupActions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.sidebarActionButton {
+  min-height: 36px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid #d8dee8;
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.sidebarActionButton:hover {
+  border-color: #b9c5d6;
+  background: #f9fbfd;
+}
+
+.systemStatus {
+  margin: 0;
+  display: grid;
+}
+
+.systemStatus div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid #e8edf3;
+}
+
+.systemStatus div:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.systemStatus div:last-child {
+  padding-bottom: 0;
+}
+
+.systemStatus dt,
+.systemStatus dd {
+  margin: 0;
+  font-size: 12px;
+}
+
+.systemStatus dt {
+  color: var(--muted);
+  font-weight: 750;
+}
+
+.systemStatus dd {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--ink);
+  font-weight: 850;
+}
+
+.statusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+}
+
+.statusDot.green {
+  background: #22c55e;
+}
+
+.statusDot.blue {
+  background: #3b82f6;
+}
+
+body.sidebarCollapsed .appSidebar {
+  padding: 20px 10px;
+  overflow: visible;
+}
+
+body.sidebarCollapsed .sidebarLabel,
+body.sidebarCollapsed .workspaceText,
+body.sidebarCollapsed .workspaceCount,
+body.sidebarCollapsed .sidebarCollapseText,
+body.sidebarCollapsed .sidebarInfo {
+  display: none;
+}
+
+body.sidebarCollapsed .sidebarCollapseButton,
+body.sidebarCollapsed .workspaceTab {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+body.sidebarCollapsed .workspaceTab {
+  grid-template-columns: 1fr;
+  justify-items: center;
+}
+
+body.sidebarCollapsed .workspaceIcon {
+  width: 22px;
+  height: 22px;
+}
+
+body.sidebarCollapsed .sidebarCollapseButton {
+  display: grid;
+  place-items: center;
+}
+
+.appFooter {
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(360px, auto);
+  justify-content: space-between;
+  gap: 32px;
+  align-items: center;
+  padding: 18px clamp(18px, 3vw, 34px);
+  border-top: 1px solid var(--line);
+  background: #fbfaf7;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.footerBrand {
+  display: flex;
+  gap: 13px;
+  align-items: center;
+  min-width: 0;
+}
+
+.footerLogo {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--teal);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.footerBrand strong {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.footerBrand span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.footerLegal {
+  display: grid;
+  gap: 5px;
+  justify-items: end;
+  text-align: right;
+}
+
+.footerLegal p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.footerLegal nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  line-height: 1.35;
+}
+
+.footerLegal a {
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 750;
+}
+
+.footerLegal a:hover {
+  text-decoration: underline;
 }
 
 .topActions,
@@ -111,10 +441,6 @@ h1 {
   font-size: 24px;
   font-weight: 700;
   line-height: 1;
-}
-
-.helpButton {
-  border-color: #b8c4d4;
 }
 
 .apiKeyButton {
@@ -428,9 +754,26 @@ body.modalOpen {
 }
 
 .layout {
-  width: min(1280px, 100%);
-  margin: 0 auto;
-  padding: 22px clamp(14px, 3vw, 34px) 34px;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+  padding: 20px clamp(14px, 2.4vw, 28px) 28px;
+}
+
+.workspaceHeader {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.workspaceHeader .eyebrow {
+  margin-bottom: 8px;
+}
+
+.workspaceHeader .subline {
+  max-width: 780px;
+  margin-top: 8px;
 }
 
 .notice {
@@ -526,85 +869,65 @@ body.modalOpen {
 }
 
 .workspaceTabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 18px 0 4px;
+  display: grid;
+  gap: 8px;
+  margin: 0;
 }
 
 .workspaceTab {
-  min-height: 44px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 9px 13px;
-  background: #fff;
-  color: var(--ink);
+  width: 100%;
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 0;
+  border-radius: 10px;
+  padding: 12px;
+  background: transparent;
+  color: rgba(255,255,255,0.70);
   cursor: pointer;
-  font-weight: 850;
+  text-align: left;
+  font-weight: 800;
 }
 
-.workspaceTab span {
+.workspaceTab:hover {
+  background: rgba(255,255,255,0.08);
+  color: #F8FAFC;
+}
+
+.workspaceIcon {
+  color: #E5E7EB;
+}
+
+.workspaceText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspaceCount {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 24px;
+  min-width: 28px;
   min-height: 22px;
-  margin-left: 8px;
   border-radius: 999px;
-  background: #edf1f5;
-  color: var(--muted);
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.78);
   font-size: 12px;
+  font-weight: 850;
 }
 
 .workspaceTab[aria-pressed="true"] {
-  border-color: var(--teal);
-  background: #eef8f4;
-  color: #174c42;
+  background: rgba(255,255,255,0.12);
+  color: #F8FAFC;
 }
 
-.workspaceTab[aria-pressed="true"] span {
-  background: var(--teal);
-  color: #fff;
-}
-
-body[data-workspace="mails"] .workspaceTab[aria-pressed="true"] {
-  border-color: var(--blue);
-  background: #e9f0fb;
-  color: #113c7c;
-}
-
-body[data-workspace="mails"] .workspaceTab[aria-pressed="true"] span {
-  background: var(--blue);
-}
-
-body[data-workspace="termine"] .workspaceTab[aria-pressed="true"] {
-  border-color: var(--violet);
-  background: #f0edff;
-  color: #3f347b;
-}
-
-body[data-workspace="termine"] .workspaceTab[aria-pressed="true"] span {
-  background: var(--violet);
-}
-
-body[data-workspace="dokumente"] .workspaceTab[aria-pressed="true"] {
-  border-color: var(--slate);
-  background: #eef2f1;
-  color: #38434d;
-}
-
-body[data-workspace="dokumente"] .workspaceTab[aria-pressed="true"] span {
-  background: var(--slate);
-}
-
-body[data-workspace="ki"] .workspaceTab[aria-pressed="true"] {
-  border-color: var(--ai);
-  background: #e8f5f4;
-  color: #21565f;
-}
-
-body[data-workspace="ki"] .workspaceTab[aria-pressed="true"] span {
-  background: var(--ai);
+.sidebarHelpTab {
+  margin-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.08);
 }
 
 .workspaceGuide {
@@ -723,6 +1046,12 @@ body[data-workspace="ki"] .workspaceGuide {
 
 .mailList {
   overflow: hidden;
+  min-height: 420px;
+}
+
+.detail {
+  min-height: 420px;
+  padding: 22px;
 }
 
 .mailItem {
@@ -902,10 +1231,7 @@ body[data-workspace="ki"] .workspaceGuide {
 }
 
 .detail {
-  min-height: 520px;
-  padding: 22px;
-  position: sticky;
-  top: 12px;
+  min-height: 420px;
 }
 
 .detail h2 {
@@ -1367,6 +1693,54 @@ body[data-workspace="ki"] .workspaceGuide {
 }
 
 @media (max-width: 980px) {
+  body {
+    overflow: auto;
+  }
+
+  .appShell {
+    min-height: 100vh;
+    height: auto;
+    grid-template-rows: auto auto auto;
+  }
+
+  .appBody {
+    grid-template-columns: 1fr;
+  }
+
+  .appSidebar {
+    overflow: visible;
+    display: grid;
+    gap: 10px;
+    padding: 12px 14px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .sidebarLabel {
+    margin-bottom: 8px;
+  }
+
+  .workspaceTabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .workspaceTab {
+    width: auto;
+    min-width: 120px;
+  }
+
+  .sidebarCollapseButton,
+  .sidebarInfo {
+    display: none;
+  }
+
+  .layout {
+    height: auto;
+    overflow: visible;
+  }
+
   .summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1402,6 +1776,13 @@ body[data-workspace="ki"] .workspaceGuide {
 
   .content {
     grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .mailList,
+  .detail {
+    max-height: none;
+    min-height: 0;
   }
 
   .detail {
@@ -1410,6 +1791,38 @@ body[data-workspace="ki"] .workspaceGuide {
 }
 
 @media (max-width: 560px) {
+  .topbar {
+    padding: 16px 14px;
+  }
+
+  .appFooter {
+    position: static;
+    display: grid;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 14px;
+    padding: 18px 14px;
+    text-align: center;
+  }
+
+  .footerBrand {
+    justify-content: center;
+    text-align: left;
+  }
+
+  .footerLegal {
+    justify-items: center;
+    text-align: center;
+  }
+
+  .footerLegal nav {
+    justify-content: center;
+  }
+
+  .workspaceTab {
+    flex: 1 1 46%;
+  }
+
   .summary,
   .detailGrid {
     grid-template-columns: 1fr;

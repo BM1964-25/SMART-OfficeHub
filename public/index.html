@@ -4,43 +4,117 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>SMART OfficeHub</title>
-    <link rel="stylesheet" href="./styles.css?v=officehub-tone-compact-20260707">
+    <link rel="stylesheet" href="./styles.css?v=officehub-sidebar-compact-backup-20260707">
   </head>
   <body>
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">SMART OfficeHub</p>
-        <h1 id="dashboardTitle">Mail Dashboard</h1>
-        <p class="subline" id="dashboardSubline">E-Mail-Zentrale für Posteingang, Antworten und Entwürfe</p>
+    <div class="appShell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">SMART OfficeHub</p>
+          <h1>SMART OfficeHub</h1>
+          <p class="subline">Zentrale Arbeitsoberfläche für E-Mail, Termine, Dokumente und KI-gestützte Antwortentwürfe.</p>
+        </div>
+        <div class="topActions">
+          <button class="button secondary apiKeyButton" type="button" id="apiKeyButton">API-Schlüssel</button>
+          <a class="button secondary" href="/auth/start" id="loginLink">Mit Google verbinden</a>
+          <button class="button primary" type="button" id="refreshButton">Aktualisieren</button>
+        </div>
+      </header>
+
+      <div class="appBody">
+        <aside class="appSidebar" aria-label="Arbeitsbereiche">
+          <div class="sidebarNavBlock">
+            <p class="sidebarLabel">Arbeitsbereiche</p>
+            <nav class="workspaceTabs" id="workspaceTabs" aria-label="Arbeitsbereiche"></nav>
+          </div>
+          <button class="sidebarCollapseButton" type="button" id="sidebarCollapseButton" aria-label="Sidebar einklappen">
+            <span class="sidebarCollapseIcon" aria-hidden="true"></span>
+            <span class="sidebarCollapseText">Einklappen</span>
+          </button>
+          <div class="sidebarInfo" id="sidebarInfo">
+            <section class="sidebarCard">
+              <h3>Datensicherung</h3>
+              <div class="backupActions">
+                <button class="sidebarActionButton" type="button" id="backupButton">
+                  <span class="sidebarActionIcon" aria-hidden="true"></span>
+                  <span>Sichern</span>
+                </button>
+                <button class="sidebarActionButton" type="button" id="restoreButton">
+                  <span class="sidebarActionIcon" aria-hidden="true"></span>
+                  <span>Wiederherstellen</span>
+                </button>
+              </div>
+              <p>Komplette Arbeitsdaten als JSON sichern oder wiederherstellen.</p>
+              <input id="restoreInput" type="file" accept="application/json,.json" hidden>
+            </section>
+            <section class="sidebarCard">
+              <h3>Systemstatus</h3>
+              <dl class="systemStatus">
+                <div>
+                  <dt>Lizenz</dt>
+                  <dd><span class="statusDot green"></span>Aktiv</dd>
+                </div>
+                <div>
+                  <dt>KI</dt>
+                  <dd><span class="statusDot green"></span>KI aktiv</dd>
+                </div>
+                <div>
+                  <dt>Speicher</dt>
+                  <dd><span class="statusDot blue"></span>Browser-Speicher</dd>
+                </div>
+              </dl>
+            </section>
+          </div>
+        </aside>
+
+        <main class="layout">
+          <section class="notice" id="notice"></section>
+          <section class="workspaceHeader" aria-label="Aktueller Arbeitsbereich">
+            <p class="eyebrow">Aktueller Arbeitsbereich</p>
+            <h2 id="dashboardTitle">Mail Dashboard</h2>
+            <p class="subline" id="dashboardSubline">E-Mail-Zentrale für Posteingang, Antworten und Entwürfe</p>
+          </section>
+          <section class="summary" aria-label="Kennzahlen" id="summary"></section>
+
+          <section class="workspaceGuide" id="workspaceGuide" aria-label="Arbeitsbereich Orientierung"></section>
+
+          <section class="toolbar" aria-label="Filter">
+            <div class="tabs" id="tabs"></div>
+            <label class="search">
+              <span>Suchen</span>
+              <input id="searchInput" type="search" placeholder="Absender, Betreff, Inhalt">
+            </label>
+          </section>
+
+          <section class="content">
+            <div class="mailList" id="mailList" aria-label="E-Mail-Liste"></div>
+            <aside class="detail" id="detail" aria-label="Details"></aside>
+          </section>
+        </main>
       </div>
-      <div class="topActions">
-        <button class="button secondary apiKeyButton" type="button" id="apiKeyButton">API-Schlüssel</button>
-        <button class="button secondary helpButton" type="button" id="helpButton">? Hilfe</button>
-        <a class="button secondary" href="/auth/start" id="loginLink">Mit Google verbinden</a>
-        <button class="button primary" type="button" id="refreshButton">Aktualisieren</button>
-      </div>
-    </header>
 
-    <main class="layout">
-      <section class="notice" id="notice"></section>
-      <section class="summary" aria-label="Kennzahlen" id="summary"></section>
-
-      <nav class="workspaceTabs" id="workspaceTabs" aria-label="Arbeitsbereiche"></nav>
-      <section class="workspaceGuide" id="workspaceGuide" aria-label="Arbeitsbereich Orientierung"></section>
-
-      <section class="toolbar" aria-label="Filter">
-        <div class="tabs" id="tabs"></div>
-        <label class="search">
-          <span>Suchen</span>
-          <input id="searchInput" type="search" placeholder="Absender, Betreff, Inhalt">
-        </label>
-      </section>
-
-      <section class="content">
-        <div class="mailList" id="mailList" aria-label="E-Mail-Liste"></div>
-        <aside class="detail" id="detail" aria-label="Details"></aside>
-      </section>
-    </main>
+      <footer class="appFooter">
+        <div class="footerBrand">
+          <div class="footerLogo" aria-hidden="true">SO</div>
+          <div>
+            <strong>SMART OfficeHub</strong>
+            <span>Intelligenter Arbeitsbereich für E-Mail, Termine, Dokumente und KI-gestützte Antwortentwürfe.</span>
+          </div>
+        </div>
+        <div class="footerLegal">
+          <p>© 2026 SmartBuilt-AI · Powered by BuiltSmart Hub - Bernhard Metzger</p>
+          <nav aria-label="Rechtliche Links">
+            <a href="https://www.built-smart-hub.com/impressum" target="_blank" rel="noreferrer">Impressum</a>
+            <span>|</span>
+            <a href="https://www.built-smart-hub.com/datenschutz" target="_blank" rel="noreferrer">Datenschutz</a>
+            <span>|</span>
+            <a href="https://www.built-smart-hub.com/agb" target="_blank" rel="noreferrer">AGB</a>
+            <span>|</span>
+            <a href="https://www.built-smart-hub.com/widerrufbelehrung" target="_blank" rel="noreferrer">Widerrufbelehrung</a>
+          </nav>
+        </div>
+      </footer>
+    </div>
 
     <aside class="helpOverlay" id="helpOverlay" aria-hidden="true">
       <div class="helpBackdrop" id="helpBackdrop"></div>
@@ -246,6 +320,6 @@
       </section>
     </aside>
 
-    <script src="./app.js?v=officehub-general-wording-20260707b"></script>
+    <script src="./app.js?v=officehub-sidebar-help-20260707"></script>
   </body>
 </html>
