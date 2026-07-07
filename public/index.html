@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>SMART OfficeHub</title>
-    <link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="./styles.css?v=officehub-draft-tools-20260707">
   </head>
   <body>
     <header class="topbar">
@@ -14,6 +14,7 @@
         <p class="subline" id="dashboardSubline">E-Mail-Zentrale für Posteingang, Antworten und Entwürfe</p>
       </div>
       <div class="topActions">
+        <button class="button secondary apiKeyButton" type="button" id="apiKeyButton">API-Schlüssel</button>
         <button class="button secondary helpButton" type="button" id="helpButton">? Hilfe</button>
         <a class="button secondary" href="/auth/start" id="loginLink">Mit Google verbinden</a>
         <button class="button primary" type="button" id="refreshButton">Aktualisieren</button>
@@ -75,7 +76,7 @@
             <article class="helpSection" id="help-overview">
               <h3>Überblick</h3>
               <p>SMART OfficeHub bündelt Gmail, Google Calendar und Gmail-Anhänge in einem lokalen Arbeitscockpit. Die App hilft beim Sichten von Mails, Erstellen oder Aktualisieren von Gmail-Entwürfen, Prüfen kommender Termine und Ordnen von Dokumentanhängen.</p>
-              <p>Die Basisfunktionen benötigen keine KI. Optional können später KI-Aufgaben wie Dokumentzusammenfassung, Mailbewertung oder Antwortoptimierung ergänzt werden.</p>
+              <p>Die Basisfunktionen benötigen keine externe KI. Die aktuelle KI-Übersicht arbeitet lokal mit den geladenen Mail-, Termin- und Dokumentdaten und hilft beim Priorisieren, Zusammenfassen und Formulieren.</p>
             </article>
 
             <article class="helpSection" id="help-access">
@@ -90,9 +91,9 @@
                 <li>Bereich „API Keys“ öffnen.</li>
                 <li>Neuen API-Key erstellen.</li>
                 <li>API-Key kopieren.</li>
-                <li>API-Key in der App eintragen, sofern KI-Funktionen aktiv sind.</li>
+                <li>In SMART OfficeHub oben „API-Schlüssel“ öffnen, API-Key eintragen und „Speichern“ klicken.</li>
               </ol>
-              <p>Hinweis: Ein API-Key wird häufig nur einmal vollständig angezeigt und sollte sicher gespeichert werden.</p>
+              <p>Hinweis: Beim Speichern prüft SMART OfficeHub die Anthropic-Verbindung automatisch. Der Button „Verbindung“ bleibt neutral, bis die Prüfung erfolgreich war; danach zeigt er „Verbindung OK“ in Grün.</p>
               <h4>Warum ein API-Key erforderlich ist</h4>
               <p>Wenn eine App KI-Funktionen über die Anthropic API nutzt, verbindet der API-Key die App mit Ihrem persönlichen Anthropic-Konto. KI-Anfragen werden dadurch Ihrem Konto zugeordnet. Ohne API-Key können solche KI-Funktionen nicht ausgeführt werden.</p>
               <h4>Warum auch bei bezahltem App-Abo ein API-Key nötig ist</h4>
@@ -107,14 +108,14 @@
                 <li>Falls vorhanden: Lizenzschlüssel im Lizenzbereich aktivieren.</li>
                 <li>Falls KI-Funktionen genutzt werden: Anthropic API-Key eintragen.</li>
                 <li>Google über „Mit Google verbinden“ autorisieren.</li>
-                <li>Posteingang laden und Arbeitsbereich wählen: Mails, Termine oder Dokumente.</li>
-                <li>Mail, Termin oder Dokument öffnen, Ergebnis prüfen und Entwurf, Status oder Analyse weiterverwenden.</li>
+                <li>Posteingang laden und Arbeitsbereich wählen: Mails, Termine, Dokumente oder KI Übersicht.</li>
+                <li>Mail, Termin, Dokument oder KI-Hinweis öffnen, Ergebnis prüfen und Entwurf, Status oder Analyse weiterverwenden.</li>
               </ol>
             </article>
 
             <article class="helpSection" id="help-ui">
               <h3>Bedienoberfläche</h3>
-              <p>Oben stehen Kennzahlen und die Arbeitsbereiche. „Mails“ zeigt Gmail-Nachrichten, „Termine“ zeigt Google-Calendar-Einträge aus allen sichtbaren Kalendern, „Dokumente“ zeigt Gmail-Anhänge als Arbeitsliste. Links steht die Liste, rechts der Detailbereich.</p>
+              <p>Oben stehen Kennzahlen und die Arbeitsbereiche. „Mails“ zeigt Gmail-Nachrichten, „Termine“ zeigt Google-Calendar-Einträge aus allen sichtbaren Kalendern, „Dokumente“ zeigt Gmail-Anhänge als Arbeitsliste. „KI Übersicht“ bündelt wichtige Hinweise aus Mails, Terminen und Dokumenten. Links steht die Liste, rechts der Detailbereich.</p>
             </article>
 
             <article class="helpSection" id="help-functions">
@@ -126,12 +127,14 @@
                 <li>Gmail-Anhänge als Dokumente erfassen, typisieren und mit Status versehen.</li>
                 <li>Dokumentinhalt bei Bedarf laden und einfache Textanalyse ausführen.</li>
               </ul>
-              <h4>Optionale KI-Aufgaben</h4>
+              <h4>KI-Aufgaben</h4>
               <ul>
-                <li>Mail-Zusammenfassungen verfeinern.</li>
-                <li>Antwortentwürfe fachlich und sprachlich optimieren.</li>
-                <li>Dokumente zusammenfassen und Risiken, Fristen oder Beträge erkennen.</li>
-                <li>Terminvorbereitung aus Mail- und Dokumentkontext erstellen.</li>
+                <li>Mails nach Dringlichkeit, Antwortbedarf und Kontext bewerten.</li>
+                <li>Mail-Zusammenfassungen mit Kernaussage, Handlungsbedarf und Kontext anzeigen.</li>
+                <li>Antwortentwürfe über Claude in den Tonalitäten professionell, freundlich, kurz oder verbindlich formulieren lassen.</li>
+                <li>Termine nach Vorbereitungsbedarf, fehlenden Angaben und Dringlichkeit auswerten.</li>
+                <li>Dokumente nach Fristen, Beträgen, Risiken und Analysebedarf prüfen.</li>
+                <li>Eine Tagesübersicht mit den wichtigsten KI-Hinweisen erzeugen.</li>
               </ul>
             </article>
 
@@ -169,6 +172,55 @@
       </section>
     </aside>
 
-    <script src="./app.js?v=officehub-help-20260707"></script>
+    <aside class="apiKeyOverlay" id="apiKeyOverlay" aria-hidden="true">
+      <div class="apiKeyBackdrop" id="apiKeyBackdrop"></div>
+      <section class="apiKeyPanel" role="dialog" aria-modal="true" aria-labelledby="apiKeyTitle">
+        <header class="apiKeyHeader">
+          <div>
+            <p class="eyebrow">Anthropic API</p>
+            <h2 id="apiKeyTitle">Anthropic API-Schlüssel verwalten</h2>
+            <p class="apiKeyHint">Der Schlüssel wird lokal im Browser gespeichert. Der Verbindungstest läuft über den lokalen OfficeHub-Server.</p>
+          </div>
+          <button class="iconButton" type="button" id="apiKeyCloseButton" aria-label="API-Schlüssel schließen">×</button>
+        </header>
+
+        <div class="apiKeyBody">
+          <label class="apiKeyField">
+            <span>Anthropic API-Schlüssel</span>
+            <div class="apiKeyInputRow">
+              <input id="anthropicApiKeyInput" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-api03-...">
+              <button class="iconActionButton" type="button" id="toggleApiKeyButton" aria-label="API-Schlüssel anzeigen">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+              <button class="iconActionButton dangerIcon" type="button" id="deleteApiKeyButton" aria-label="API-Schlüssel löschen">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 6h18"></path>
+                  <path d="M8 6V4h8v2"></path>
+                  <path d="M6 6l1 15h10l1-15"></path>
+                  <path d="M10 11v6"></path>
+                  <path d="M14 11v6"></path>
+                </svg>
+              </button>
+            </div>
+          </label>
+
+          <div class="apiKeyActions">
+            <button class="button primary" type="button" id="saveApiKeyButton">Speichern</button>
+            <button class="button secondary" type="button" id="connectApiKeyButton">Verbindung</button>
+            <button class="button secondary" type="button" id="verifyApiKeyButton">Verbindung überprüfen</button>
+            <button class="button danger" type="button" id="disconnectApiKeyButton">Verbindung trennen</button>
+          </div>
+
+          <div class="apiKeyStatus" id="apiKeyStatus" role="status" aria-live="polite">
+            Noch kein API-Schlüssel gespeichert.
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <script src="./app.js?v=officehub-claude-reply-20260707"></script>
   </body>
 </html>

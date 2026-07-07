@@ -11,7 +11,8 @@ const bucketOrder = ["alle", "antwort", "prüfen", "termine", "info", "werbung"]
 const workspaceLabels = {
   mails: "Mails",
   termine: "Termine",
-  dokumente: "Dokumente"
+  dokumente: "Dokumente",
+  ki: "KI Übersicht"
 };
 const workspaceMeta = {
   mails: {
@@ -25,9 +26,13 @@ const workspaceMeta = {
   dokumente: {
     title: "Dokumenten Dashboard",
     subline: "Arbeitsbereich für Anhänge, Rechnungen, Angebote, Verträge und Prüfunterlagen"
+  },
+  ki: {
+    title: "KI Dashboard",
+    subline: "Assistenz für Priorisierung, Zusammenfassung, Antworttexte, Termine, Dokumente und Tagesplanung"
   }
 };
-const workspaceOrder = ["mails", "termine", "dokumente"];
+const workspaceOrder = ["mails", "termine", "dokumente", "ki"];
 let emails = [];
 let calendarEvents = [];
 let activeWorkspace = "mails";
@@ -41,10 +46,15 @@ let inboxStats = {
 const draftStorageKey = "smartOfficeHubDraftCreatedIds";
 const draftIdStorageKey = "smartOfficeHubDraftIds";
 const documentStatusStorageKey = "smartOfficeHubDocumentStatus";
+const anthropicApiKeyStorageKey = "smartOfficeHubAnthropicApiKey";
 const draftCreatedIds = new Set(loadDraftCreatedIds());
 const draftIdsByEmail = loadDraftIds();
 const documentStatusByKey = loadDocumentStatus();
 const documentAnalysisByKey = {};
+let anthropicApiKey = loadAnthropicApiKey();
+let anthropicKeyVisible = false;
+let anthropicConnected = false;
+let anthropicBusy = "";
 
 const noticeEl = document.querySelector("#notice");
 const dashboardTitleEl = document.querySelector("#dashboardTitle");
@@ -57,6 +67,18 @@ const detailEl = document.querySelector("#detail");
 const searchEl = document.querySelector("#searchInput");
 const refreshButton = document.querySelector("#refreshButton");
 const loginLink = document.querySelector("#loginLink");
+const apiKeyButton = document.querySelector("#apiKeyButton");
+const apiKeyOverlay = document.querySelector("#apiKeyOverlay");
+const apiKeyBackdrop = document.querySelector("#apiKeyBackdrop");
+const apiKeyCloseButton = document.querySelector("#apiKeyCloseButton");
+const anthropicApiKeyInput = document.querySelector("#anthropicApiKeyInput");
+const toggleApiKeyButton = document.querySelector("#toggleApiKeyButton");
+const deleteApiKeyButton = document.querySelector("#deleteApiKeyButton");
+const saveApiKeyButton = document.querySelector("#saveApiKeyButton");
+const connectApiKeyButton = document.querySelector("#connectApiKeyButton");
+const verifyApiKeyButton = document.querySelector("#verifyApiKeyButton");
+const disconnectApiKeyButton = document.querySelector("#disconnectApiKeyButton");
+const apiKeyStatus = document.querySelector("#apiKeyStatus");
 const helpButton = document.querySelector("#helpButton");
 const helpOverlay = document.querySelector("#helpOverlay");
 const helpBackdrop = document.querySelector("#helpBackdrop");
@@ -73,12 +95,18 @@ function showNotice(text, type = "info") {
   noticeEl.className = `notice active ${type === "error" ? "error" : ""}`;
 }
 
+function showRuntimeError(error) {
+  const message = error?.message || String(error || "Unbekannter Fehler");
+  showNotice(`OfficeHub konnte eine Aktion nicht ausführen: ${message}`, "error");
+}
+
 function hideNotice() {
   noticeEl.className = "notice";
   noticeEl.textContent = "";
 }
 
 function openHelp() {
+  if (!helpOverlay || !helpSearchInput) return;
   helpOverlay.classList.add("active");
   helpOverlay.setAttribute("aria-hidden", "false");
   document.body.classList.add("helpOpen");
@@ -86,6 +114,7 @@ function openHelp() {
 }
 
 function closeHelp() {
+  if (!helpOverlay || !helpButton) return;
   helpOverlay.classList.remove("active");
   helpOverlay.setAttribute("aria-hidden", "true");
   document.body.classList.remove("helpOpen");
@@ -93,11 +122,163 @@ function closeHelp() {
 }
 
 function filterHelp() {
+  if (!helpSearchInput || !helpContent) return;
   const query = helpSearchInput.value.trim().toLowerCase();
   helpContent.querySelectorAll(".helpSection").forEach((section) => {
     const text = section.textContent.toLowerCase();
     section.hidden = Boolean(query) && !text.includes(query);
   });
+}
+
+function setApiKeyStatus(message, type = "info") {
+  if (!apiKeyStatus) return;
+  apiKeyStatus.textContent = message;
+  apiKeyStatus.className = `apiKeyStatus ${type}`;
+}
+
+function setAnthropicBusy(action = "") {
+  anthropicBusy = action;
+  [saveApiKeyButton, connectApiKeyButton, verifyApiKeyButton, disconnectApiKeyButton, deleteApiKeyButton, toggleApiKeyButton]
+    .filter(Boolean)
+    .forEach((button) => {
+      button.disabled = Boolean(action);
+    });
+  renderApiKeyPanel();
+}
+
+function renderApiKeyPanel() {
+  if (!anthropicApiKeyInput) return;
+  const hasKey = Boolean(anthropicApiKey);
+  const inputIsMasked = hasKey && !anthropicKeyVisible && document.activeElement !== anthropicApiKeyInput;
+  anthropicApiKeyInput.type = anthropicKeyVisible ? "text" : "password";
+  anthropicApiKeyInput.value = inputIsMasked ? maskedAnthropicKey() : anthropicApiKeyInput.value || (anthropicKeyVisible ? anthropicApiKey : "");
+  if (inputIsMasked) anthropicApiKeyInput.type = "text";
+  anthropicApiKeyInput.readOnly = inputIsMasked;
+
+  toggleApiKeyButton?.setAttribute("aria-label", anthropicKeyVisible ? "API-Schlüssel verbergen" : "API-Schlüssel anzeigen");
+  connectApiKeyButton.textContent = anthropicConnected ? "Verbindung OK" : anthropicBusy === "connect" ? "Verbindung ..." : "Verbindung";
+  connectApiKeyButton.classList.toggle("success", anthropicConnected);
+  verifyApiKeyButton.textContent = anthropicBusy === "verify" ? "Prüfe ..." : "Verbindung überprüfen";
+  saveApiKeyButton.textContent = anthropicBusy === "save" ? "Speichere ..." : "Speichern";
+
+  const statusClass = apiKeyStatus?.className || "";
+  const hasFinalFeedback = statusClass.includes("success") || statusClass.includes("error");
+  if (!hasKey && !anthropicBusy && !hasFinalFeedback) setApiKeyStatus("Noch kein API-Schlüssel gespeichert.", "info");
+  if (hasKey && !anthropicConnected && !anthropicBusy && !hasFinalFeedback) {
+    setApiKeyStatus(`Gespeichert: ${maskedAnthropicKey()}. Verbindung noch nicht aktiv.`, "info");
+  }
+}
+
+function openApiKeyPanel() {
+  if (!apiKeyOverlay || !anthropicApiKeyInput) return;
+  apiKeyOverlay.classList.add("active");
+  apiKeyOverlay.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modalOpen");
+  anthropicKeyVisible = false;
+  anthropicApiKeyInput.value = "";
+  renderApiKeyPanel();
+  anthropicApiKeyInput.focus();
+}
+
+function closeApiKeyPanel() {
+  if (!apiKeyOverlay) return;
+  apiKeyOverlay.classList.remove("active");
+  apiKeyOverlay.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("modalOpen");
+  apiKeyButton?.focus();
+}
+
+function currentApiKeyInputValue() {
+  const raw = anthropicApiKeyInput?.value.trim() || "";
+  return raw.includes("•") ? anthropicApiKey : raw;
+}
+
+async function verifyAnthropicConnection(mode = "verify") {
+  const key = currentApiKeyInputValue();
+  if (!key) {
+    anthropicConnected = false;
+    setApiKeyStatus("Bitte zuerst einen Anthropic API-Schlüssel eingeben.", "error");
+    renderApiKeyPanel();
+    return false;
+  }
+
+  setAnthropicBusy(mode);
+  setApiKeyStatus(mode === "save" ? "Schlüssel gespeichert, Verbindung wird geprüft ..." : "Verbindung zur Anthropic API wird geprüft ...", "loading");
+  try {
+    const data = await api("/api/anthropic/test", {
+      method: "POST",
+      body: JSON.stringify({ apiKey: key })
+    });
+    anthropicConnected = true;
+    setApiKeyStatus(`Verbindung OK. Anthropic API erreichbar${data.result?.model ? `, erstes verfügbares Modell: ${data.result.model}` : ""}.`, "success");
+    return true;
+  } catch (error) {
+    anthropicConnected = false;
+    setApiKeyStatus(`Fehler: ${error.message}`, "error");
+    return false;
+  } finally {
+    setAnthropicBusy("");
+  }
+}
+
+async function saveAnthropicKeyFromInput() {
+  const key = currentApiKeyInputValue();
+  if (!key) {
+    setApiKeyStatus("Bitte zuerst einen API-Schlüssel eingeben.", "error");
+    return;
+  }
+  saveAnthropicApiKey(key);
+  anthropicApiKeyInput.value = "";
+  anthropicKeyVisible = false;
+  renderApiKeyPanel();
+  await verifyAnthropicConnection("save");
+}
+
+async function connectAnthropic() {
+  if (!anthropicApiKey && currentApiKeyInputValue()) saveAnthropicApiKey(currentApiKeyInputValue());
+  await verifyAnthropicConnection("connect");
+}
+
+async function generateClaudeReply(email, tone, currentText) {
+  if (!anthropicApiKey) {
+    openApiKeyPanel();
+    throw new Error("Bitte zuerst den Anthropic API-Schlüssel speichern und die Verbindung prüfen.");
+  }
+
+  const result = await api("/api/anthropic/reply", {
+    method: "POST",
+    body: JSON.stringify({
+      apiKey: anthropicApiKey,
+      tone,
+      currentText,
+      email: {
+        from: email.from,
+        subject: email.subject,
+        snippet: email.snippet,
+        bodyText: email.bodyText,
+        nextAction: email.nextAction,
+        bucket: email.bucket,
+        priority: email.priority,
+        labels: email.labels
+      }
+    })
+  });
+
+  return result.result;
+}
+
+function disconnectAnthropic() {
+  anthropicConnected = false;
+  setApiKeyStatus(anthropicApiKey ? "Verbindung getrennt. Der gespeicherte Schlüssel bleibt erhalten." : "Verbindung getrennt.", "info");
+  renderApiKeyPanel();
+}
+
+function deleteAnthropicKey() {
+  clearAnthropicApiKey();
+  anthropicApiKeyInput.value = "";
+  anthropicKeyVisible = false;
+  setApiKeyStatus("API-Schlüssel wurde gelöscht und die Verbindung getrennt.", "success");
+  renderApiKeyPanel();
 }
 
 function loadDraftCreatedIds() {
@@ -130,6 +311,14 @@ function loadDocumentStatus() {
   }
 }
 
+function loadAnthropicApiKey() {
+  try {
+    return localStorage.getItem(anthropicApiKeyStorageKey) || "";
+  } catch {
+    return "";
+  }
+}
+
 function saveDraftCreatedIds() {
   sessionStorage.setItem(draftStorageKey, JSON.stringify([...draftCreatedIds]));
 }
@@ -140,6 +329,33 @@ function saveDraftIds() {
 
 function saveDocumentStatus() {
   sessionStorage.setItem(documentStatusStorageKey, JSON.stringify(documentStatusByKey));
+}
+
+function saveAnthropicApiKey(value) {
+  anthropicApiKey = value.trim();
+  try {
+    localStorage.setItem(anthropicApiKeyStorageKey, anthropicApiKey);
+  } catch {
+    setApiKeyStatus("Der Browser konnte den API-Schlüssel nicht lokal speichern.", "error");
+  }
+}
+
+function clearAnthropicApiKey() {
+  anthropicApiKey = "";
+  anthropicConnected = false;
+  try {
+    localStorage.removeItem(anthropicApiKeyStorageKey);
+  } catch {
+    // If localStorage is unavailable, clearing in memory is still useful for this session.
+  }
+}
+
+function maskedAnthropicKey() {
+  if (!anthropicApiKey) return "";
+  const visiblePrefix = anthropicApiKey.startsWith("sk-ant-")
+    ? anthropicApiKey.slice(0, Math.min(10, anthropicApiKey.length))
+    : anthropicApiKey.slice(0, Math.min(6, anthropicApiKey.length));
+  return `${visiblePrefix}${"•".repeat(10)}`;
 }
 
 function hasCreatedDraft(email) {
@@ -283,6 +499,7 @@ function workspaceEmails(workspace = activeWorkspace) {
 function workspaceCount(workspace) {
   if (workspace === "termine") return calendarEvents.length;
   if (workspace === "dokumente") return documentItems().length;
+  if (workspace === "ki") return aiDailyItems().length;
   return workspaceEmails(workspace).length;
 }
 
@@ -299,6 +516,11 @@ function itemSearchText(item) {
     const attachment = item.attachment;
     const email = item.email;
     return [attachment.filename, attachment.mimeType, email.from, email.subject, email.snippet, email.bodyText].join(" ").toLowerCase();
+  }
+  if (item.kind === "ai") {
+    if (item.aiType === "mail") return [item.email.from, item.email.subject, item.email.bodyText, item.assessment.highlights.join(" "), item.assessment.nextAction].join(" ").toLowerCase();
+    if (item.aiType === "termin") return [item.event.title, item.event.description, item.event.location, item.assessment.prep.join(" ")].join(" ").toLowerCase();
+    if (item.aiType === "dokument") return [item.document.attachment.filename, item.document.email.subject, item.assessment.risks.join(" "), item.assessment.nextAction].join(" ").toLowerCase();
   }
   return emailSearchText(item.email);
 }
@@ -354,12 +576,137 @@ function assessDocument(email, attachment) {
   return { flags, nextAction };
 }
 
+function urgencyScoreFromText(text = "") {
+  const lower = text.toLowerCase();
+  let score = 0;
+  if (textIncludes(lower, ["dringend", "eilt", "sofort", "heute", "asap", "frist", "deadline", "fällig"])) score += 3;
+  if (textIncludes(lower, ["morgen", "zeitnah", "rückmeldung", "antwort", "bitte", "freigabe", "bestätigung"])) score += 2;
+  if (textIncludes(lower, ["rechnung", "zahlung", "mahnung", "angebot", "auftrag", "termin", "meeting", "rückruf"])) score += 2;
+  if (textIncludes(lower, ["newsletter", "werbung", "angebot des monats", "online ansehen"])) score -= 2;
+  return score;
+}
+
+function priorityFromScore(score) {
+  if (score >= 5) return "hoch";
+  if (score >= 2) return "mittel";
+  return "niedrig";
+}
+
+function aiEmailAssessment(email) {
+  const text = [email.from, email.subject, email.snippet, email.bodyText, email.nextAction].join(" ");
+  const lower = text.toLowerCase();
+  const contexts = detectedContext(email).split(", ").filter((context) => context && context !== "Kein spezieller Kontext erkannt");
+  const isAutomatedInfo = email.bucket === "werbung" || textIncludes(lower, [
+    "newsletter",
+    "online ansehen",
+    "abmelden",
+    "unsubscribe",
+    "noreply",
+    "no-reply",
+    "google search console",
+    "paypal open"
+  ]);
+  const strongReplySignal = textIncludes(lower, ["rückfrage", "rückmeldung", "können wir", "bitte senden", "bitte teilen", "termin vereinbaren", "angebot", "beratung", "auftrag"]) || /\?/.test(text);
+  const replyNeeded = !email.isSmartBooking && !isAutomatedInfo && (email.bucket === "antwort" || strongReplySignal);
+  const score = urgencyScoreFromText(text)
+    + (email.priority === "hoch" ? 2 : email.priority === "mittel" ? 1 : 0)
+    + (replyNeeded ? 2 : 0)
+    - (isAutomatedInfo ? 4 : 0);
+  const suggestedBucket = isAppointmentEmail(email)
+    ? "termine"
+    : isDocumentEmail(email)
+      ? "prüfen"
+      : replyNeeded
+        ? "antwort"
+        : isAutomatedInfo
+          ? email.bucket === "werbung" ? "werbung" : "info"
+          : "info";
+  const highlights = [];
+  if (replyNeeded) highlights.push("Antwortbedarf erkannt");
+  if (contexts.includes("Termin")) highlights.push("Terminbezug");
+  if (contexts.includes("Frist")) highlights.push("Frist prüfen");
+  if (contexts.includes("Rechnung/Zahlung")) highlights.push("Zahlung oder Rechnung");
+  if (isDocumentEmail(email)) highlights.push(`${emailDocumentCount(email)} Anhang${emailDocumentCount(email) === 1 ? "" : "e"}`);
+  if (!highlights.length) highlights.push("Zur Kenntnisnahme");
+
+  return {
+    score,
+    priority: priorityFromScore(score),
+    suggestedBucket,
+    replyNeeded,
+    highlights,
+    summary: mailSummary(email),
+    nextAction: email.isSmartBooking
+      ? "Terminstatus im Kalender prüfen; kein Antwortentwurf nötig."
+      : replyNeeded
+        ? "Antwortentwurf prüfen oder mit KI verbessern."
+        : email.nextAction
+  };
+}
+
+function aiEventAssessment(event) {
+  const text = [event.title, event.description, event.location, event.organizer, event.calendarName].join(" ");
+  const lower = text.toLowerCase();
+  const starts = event.start ? new Date(event.start) : null;
+  const hoursUntil = starts && !Number.isNaN(starts.getTime()) ? (starts.getTime() - Date.now()) / 36e5 : 999;
+  const score = urgencyScoreFromText(text) + (hoursUntil <= 24 ? 3 : hoursUntil <= 72 ? 2 : 0) + (!event.location ? 1 : 0);
+  const prep = [];
+  if (hoursUntil <= 24) prep.push("Termin innerhalb der nächsten 24 Stunden prüfen");
+  if (!event.location) prep.push("Ort oder Einwahllink fehlt");
+  if (!event.description) prep.push("Agenda oder Beschreibung fehlt");
+  if (textIncludes(lower, ["beratung", "projekt", "angebot", "erstgespräch", "meeting"])) prep.push("Unterlagen und Gesprächsziel vorbereiten");
+  if (!prep.length) prep.push("Termin beobachten, aktuell kein kritischer Vorbereitungsbedarf");
+
+  return {
+    score,
+    priority: priorityFromScore(score),
+    prep,
+    nextAction: prep[0]
+  };
+}
+
+function aiDocumentAssessment(item) {
+  const { email, attachment, assessment, documentType, key } = item;
+  const analysis = documentAnalysisByKey[key];
+  const text = [attachment.filename, attachment.mimeType, email.subject, email.bodyText, analysis?.summary, analysis?.preview].join(" ");
+  const score = urgencyScoreFromText(text) + (["Rechnung", "Angebot", "Vertrag", "Leistungsverzeichnis"].includes(documentType) ? 2 : 0);
+  const risks = [...assessment.flags];
+  if (analysis?.signals?.length) risks.push(...analysis.signals.filter((signal) => !risks.includes(signal)));
+  if (!analysis) risks.push("Inhaltsanalyse noch nicht gestartet");
+
+  return {
+    score,
+    priority: priorityFromScore(score),
+    risks: risks.length ? risks : ["Kein klares Risiko erkannt"],
+    nextAction: analysis ? assessment.nextAction : "Dokumentinhalt analysieren und Prüfsignale bestätigen."
+  };
+}
+
+function aiDailyItems() {
+  const emailItems = emails
+    .map((email) => ({ kind: "ai", aiType: "mail", key: `ai:mail:${email.id}`, email, assessment: aiEmailAssessment(email) }))
+    .filter((item) => item.assessment.priority !== "niedrig" || item.assessment.replyNeeded || isDocumentEmail(item.email));
+  const eventItems = calendarEvents
+    .map((event) => ({ kind: "ai", aiType: "termin", key: `ai:event:${event.id}`, event, assessment: aiEventAssessment(event) }))
+    .filter((item) => item.assessment.priority !== "niedrig");
+  const docItems = documentItems()
+    .map((document) => ({ kind: "ai", aiType: "dokument", key: `ai:document:${document.key}`, document, assessment: aiDocumentAssessment(document) }))
+    .filter((item) => item.assessment.priority !== "niedrig" || item.document.status === "prüfen");
+
+  return [...emailItems, ...eventItems, ...docItems]
+    .sort((a, b) => b.assessment.score - a.assessment.score)
+    .slice(0, 12);
+}
+
 function workspaceItems() {
   if (activeWorkspace === "termine") {
     return calendarEvents.map((event) => ({ kind: "event", key: `event:${event.id}`, event }));
   }
   if (activeWorkspace === "dokumente") {
     return documentItems();
+  }
+  if (activeWorkspace === "ki") {
+    return aiDailyItems();
   }
   return workspaceEmails(activeWorkspace).map((email) => ({ kind: "email", key: `mail:${email.id}`, email }));
 }
@@ -379,6 +726,7 @@ function renderSummary() {
     ["Zu prüfen", bucketCount("prüfen"), "mail"],
     ["Termine", workspaceCount("termine"), "appointment"],
     ["Dokumente", workspaceCount("dokumente"), "document"],
+    ["KI Hinweise", workspaceCount("ki"), "ai"],
     ["Entwürfe erstellt", draftCount, "mail"]
   ];
   summaryEl.innerHTML = metrics
@@ -430,7 +778,7 @@ function renderTabs() {
 function filteredItems() {
   const query = searchEl.value.trim().toLowerCase();
   return workspaceItems().filter((item) => {
-    const inBucket = item.kind === "event" || activeBucket === "alle" || item.email.bucket === activeBucket;
+    const inBucket = item.kind === "event" || item.kind === "document" || item.kind === "ai" || activeBucket === "alle" || item.email.bucket === activeBucket;
     const haystack = itemSearchText(item);
     return inBucket && (!query || haystack.includes(query));
   });
@@ -443,7 +791,9 @@ function renderList() {
       ? "Keine kommenden Google-Calendar-Termine gefunden."
       : activeWorkspace === "dokumente"
         ? "Keine Gmail-Anhänge im geladenen Posteingang gefunden."
-        : "Keine passenden E-Mails gefunden.";
+        : activeWorkspace === "ki"
+          ? "Keine KI-Hinweise mit Priorität gefunden."
+          : "Keine passenden E-Mails gefunden.";
     listEl.innerHTML = `<div class="empty">${emptyText}</div>`;
     detailEl.innerHTML = '<div class="empty">Aktualisiere den Posteingang oder passe die Suche an.</div>';
     return;
@@ -455,6 +805,7 @@ function renderList() {
     .map((item) => {
       if (item.kind === "event") return renderCalendarListItem(item.event, item.key);
       if (item.kind === "document") return renderDocumentListItem(item);
+      if (item.kind === "ai") return renderAiListItem(item);
       const email = item.email;
       const current = item.key === activeId ? "true" : "false";
       const draftClass = hasCreatedDraft(email) ? "draftCreated" : "";
@@ -492,6 +843,43 @@ function renderList() {
       render();
     });
   });
+}
+
+function renderAiListItem(item) {
+  const current = item.key === activeId ? "true" : "false";
+  const title = item.aiType === "mail"
+    ? item.email.subject
+    : item.aiType === "termin"
+      ? item.event.title
+      : item.document.attachment.filename || "Unbenanntes Dokument";
+  const source = item.aiType === "mail"
+    ? item.email.from
+    : item.aiType === "termin"
+      ? item.event.calendarName || "Google Calendar"
+      : item.document.email.from;
+  const date = item.aiType === "termin"
+    ? formatEventRange(item.event)
+    : item.aiType === "dokument"
+      ? formatDate(item.document.email.date, item.document.email.timestamp)
+      : formatDate(item.email.date, item.email.timestamp);
+  const snippet = item.assessment.nextAction || "KI-Hinweis prüfen.";
+  const label = item.aiType === "mail" ? "Mail-KI" : item.aiType === "termin" ? "Termin-KI" : "Dokument-KI";
+
+  return `
+    <button class="mailItem aiItem" type="button" data-id="${item.key}" aria-current="${current}">
+      <span class="mailHead">
+        <span class="sender">${escapeHtml(source)}</span>
+        <span class="date">${escapeHtml(date)}</span>
+      </span>
+      <span class="subject">${escapeHtml(title)}</span>
+      <span class="snippet">${escapeHtml(snippet)}</span>
+      <span class="badges">
+        <span class="badge aiBadge">${label}</span>
+        <span class="badge ${item.assessment.priority}">${item.assessment.priority}</span>
+        <span class="badge bucket">Score ${item.assessment.score}</span>
+      </span>
+    </button>
+  `;
 }
 
 function renderDocumentListItem(item) {
@@ -792,6 +1180,146 @@ function defaultReply(email) {
   return `${greeting}\n\nvielen Dank für Ihre Nachricht.\n\nIch habe Ihr Anliegen aufgenommen und melde mich mit einer konkreten Rückmeldung dazu. Falls es eine Frist oder zusätzliche Informationen gibt, senden Sie mir diese bitte noch kurz mit.\n\nMit freundlichen Grüßen\nBernhard Metzger`;
 }
 
+function renderAiEmailBox(email) {
+  const assessment = aiEmailAssessment(email);
+  const summaryRows = assessment.summary
+    .map(([label, value]) => `<li><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</li>`)
+    .join("");
+  const highlights = assessment.highlights.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+
+  return `
+    <section class="aiBox">
+      <div class="summaryHead">
+        <span>KI-Bewertung</span>
+        <small>${assessment.priority} · Kategorie: ${labels[assessment.suggestedBucket] || assessment.suggestedBucket}</small>
+      </div>
+      <ul>
+        ${summaryRows}
+        <li><strong>Antwortbedarf:</strong> ${assessment.replyNeeded ? "Ja, Antwort prüfen oder erstellen." : "Kein direkter Antwortzwang erkannt."}</li>
+        <li><strong>Hinweise:</strong><ul>${highlights}</ul></li>
+        <li><strong>Nächster Schritt:</strong> ${escapeHtml(assessment.nextAction)}</li>
+      </ul>
+    </section>
+  `;
+}
+
+function renderAiEventBox(event) {
+  const assessment = aiEventAssessment(event);
+  const prepRows = assessment.prep.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  return `
+    <section class="aiBox appointmentAiBox">
+      <div class="summaryHead">
+        <span>KI-Terminbewertung</span>
+        <small>${assessment.priority} · Score ${assessment.score}</small>
+      </div>
+      <ul>
+        <li><strong>Vorbereitung:</strong><ul>${prepRows}</ul></li>
+        <li><strong>Nächster Schritt:</strong> ${escapeHtml(assessment.nextAction)}</li>
+      </ul>
+    </section>
+  `;
+}
+
+function renderAiDocumentBox(item) {
+  const assessment = aiDocumentAssessment(item);
+  const riskRows = assessment.risks.map((risk) => `<li>${escapeHtml(risk)}</li>`).join("");
+  return `
+    <section class="aiBox documentAiBox">
+      <div class="summaryHead">
+        <span>KI-Dokumentprüfung</span>
+        <small>${assessment.priority} · Score ${assessment.score}</small>
+      </div>
+      <ul>
+        <li><strong>Prüfpunkte:</strong><ul>${riskRows}</ul></li>
+        <li><strong>Nächster Schritt:</strong> ${escapeHtml(assessment.nextAction)}</li>
+      </ul>
+    </section>
+  `;
+}
+
+function renderAiDailyBrief() {
+  const items = aiDailyItems();
+  const high = items.filter((item) => item.assessment.priority === "hoch").length;
+  const replies = items.filter((item) => item.aiType === "mail" && item.assessment.replyNeeded).length;
+  const appointments = items.filter((item) => item.aiType === "termin").length;
+  const documents = items.filter((item) => item.aiType === "dokument").length;
+  const topActions = items.slice(0, 3).map((item) => {
+    const title = item.aiType === "mail"
+      ? item.email.subject
+      : item.aiType === "termin"
+        ? item.event.title
+        : item.document.attachment.filename || "Dokument";
+    return `<li><strong>${escapeHtml(title)}:</strong> ${escapeHtml(item.assessment.nextAction)}</li>`;
+  }).join("");
+
+  return `
+    <section class="aiBox dailyAiBox">
+      <div class="summaryHead">
+        <span>Was ist heute wichtig?</span>
+        <small>${items.length} KI-Hinweise</small>
+      </div>
+      <ul>
+        <li><strong>Priorität:</strong> ${high} hohe Hinweise, ${replies} offene Antwortaufgabe${replies === 1 ? "" : "n"}.</li>
+        <li><strong>Termine/Dokumente:</strong> ${appointments} Termin-Hinweis${appointments === 1 ? "" : "e"}, ${documents} Dokument-Hinweis${documents === 1 ? "" : "e"}.</li>
+        <li><strong>Nächste Schritte:</strong><ul>${topActions || "<li>Aktuell keine kritischen Schritte erkannt.</li>"}</ul></li>
+      </ul>
+    </section>
+  `;
+}
+
+function renderAiDetail(item) {
+  if (item.aiType === "mail") {
+    detailEl.innerHTML = `
+      <p class="panelLabel">KI-Hinweis</p>
+      <h2>${escapeHtml(item.email.subject)}</h2>
+      ${renderAiDailyBrief()}
+      ${renderAiEmailBox(item.email)}
+      <div class="actions">
+        <button class="button primary" type="button" id="openAiSource">Mail öffnen</button>
+      </div>
+    `;
+    detailEl.querySelector("#openAiSource").addEventListener("click", () => {
+      activeWorkspace = "mails";
+      activeId = `mail:${item.email.id}`;
+      render();
+    });
+    return;
+  }
+
+  if (item.aiType === "termin") {
+    detailEl.innerHTML = `
+      <p class="panelLabel">KI-Hinweis</p>
+      <h2>${escapeHtml(item.event.title)}</h2>
+      ${renderAiDailyBrief()}
+      ${renderAiEventBox(item.event)}
+      <div class="actions">
+        <button class="button primary" type="button" id="openAiSource">Termin öffnen</button>
+      </div>
+    `;
+    detailEl.querySelector("#openAiSource").addEventListener("click", () => {
+      activeWorkspace = "termine";
+      activeId = `event:${item.event.id}`;
+      render();
+    });
+    return;
+  }
+
+  detailEl.innerHTML = `
+    <p class="panelLabel">KI-Hinweis</p>
+    <h2>${escapeHtml(item.document.attachment.filename || "Dokument")}</h2>
+    ${renderAiDailyBrief()}
+    ${renderAiDocumentBox(item.document)}
+    <div class="actions">
+      <button class="button primary" type="button" id="openAiSource">Dokument öffnen</button>
+    </div>
+  `;
+  detailEl.querySelector("#openAiSource").addEventListener("click", () => {
+    activeWorkspace = "dokumente";
+    activeId = item.document.key;
+    render();
+  });
+}
+
 async function archiveEmail(email) {
   if (!confirm(`E-Mail archivieren?\n\n${email.subject}`)) return;
   await api(`/api/messages/${email.id}/archive`, { method: "POST" });
@@ -861,6 +1389,7 @@ function renderCalendarDetail(event) {
         <li><strong>Vorbereitung:</strong> Unterlagen, offene Rückfragen und Bezugsmails prüfen.</li>
       </ul>
     </section>
+    ${renderAiEventBox(event)}
     <div class="detailGrid">
       <div class="fact"><span>Organisator</span>${escapeHtml(event.organizer || "unbekannt")}</div>
       <div class="fact"><span>Kalender</span>${escapeHtml(event.calendarName || "Google Calendar")}</div>
@@ -917,6 +1446,7 @@ function renderDocumentDetail(item) {
         <li><strong>Nächster Schritt:</strong> ${escapeHtml(assessment.nextAction)}</li>
       </ul>
     </section>
+    ${renderAiDocumentBox(item)}
     <section class="documentWorkBox">
       <div class="summaryHead">
         <span>Prüfstatus</span>
@@ -979,6 +1509,18 @@ function renderEmailDetail(email) {
     : `<div class="draftBox">
       <label for="draftText"><strong>Antwortentwurf</strong></label>
       <textarea id="draftText">${escapeHtml(draftText)}</textarea>
+      <div class="draftTools">
+        <label>
+          <span>Tonalität</span>
+          <select id="draftTone">
+            <option value="professionell">professionell</option>
+            <option value="freundlich">freundlich</option>
+            <option value="kurz">kurz</option>
+            <option value="verbindlich">verbindlich</option>
+          </select>
+        </label>
+        <button class="button secondary" type="button" id="improveDraftButton">Mit Claude verbessern</button>
+      </div>
       <div class="actions">
         <button class="button secondary" type="button" id="draftButton">${existingDraftId ? "Entwurf in Gmail aktualisieren" : "Entwurf in Gmail erstellen"}</button>
       </div>
@@ -1001,6 +1543,7 @@ function renderEmailDetail(email) {
       </div>
       <ul>${summaryLines}</ul>
     </section>
+    ${renderAiEmailBox(email)}
     <div class="detailGrid">
       <div class="fact"><span>Absender</span>${escapeHtml(email.from)}</div>
       <div class="fact"><span>Datum</span>${formatDate(email.date, email.timestamp)}</div>
@@ -1029,6 +1572,25 @@ function renderEmailDetail(email) {
   detailEl.querySelector("#archiveButton").addEventListener("click", () => archiveEmail(email));
   detailEl.querySelector("#trashButton").addEventListener("click", () => trashEmail(email));
   detailEl.querySelector("#draftButton")?.addEventListener("click", () => createDraft(email));
+  detailEl.querySelector("#improveDraftButton")?.addEventListener("click", async () => {
+    const textarea = detailEl.querySelector("#draftText");
+    const button = detailEl.querySelector("#improveDraftButton");
+    const tone = detailEl.querySelector("#draftTone")?.value || "professionell";
+    const previousLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = "Claude formuliert ...";
+    showNotice("Claude erstellt einen individuellen Antwortentwurf ...");
+    try {
+      const result = await generateClaudeReply(email, tone, textarea.value);
+      textarea.value = result.reply;
+      showNotice(`Claude-Entwurf wurde erstellt${result.model ? ` (${result.model})` : ""}. Gmail wird erst beim Erstellen oder Aktualisieren geändert.`);
+    } catch (error) {
+      showNotice(error.message || "Claude konnte keinen Entwurf erstellen.", "error");
+    } finally {
+      button.disabled = false;
+      button.textContent = previousLabel;
+    }
+  });
 }
 
 function renderDetail() {
@@ -1040,6 +1602,10 @@ function renderDetail() {
   }
   if (item.kind === "document") {
     renderDocumentDetail(item);
+    return;
+  }
+  if (item.kind === "ai") {
+    renderAiDetail(item);
     return;
   }
   renderEmailDetail(item.email);
@@ -1072,17 +1638,53 @@ refreshButton.addEventListener("click", async () => {
   }
 });
 
-helpButton.addEventListener("click", openHelp);
-helpCloseButton.addEventListener("click", closeHelp);
-helpBackdrop.addEventListener("click", closeHelp);
-helpSearchInput.addEventListener("input", filterHelp);
+apiKeyButton?.addEventListener("click", openApiKeyPanel);
+apiKeyCloseButton?.addEventListener("click", closeApiKeyPanel);
+apiKeyBackdrop?.addEventListener("click", closeApiKeyPanel);
+toggleApiKeyButton?.addEventListener("click", () => {
+  const currentValue = currentApiKeyInputValue();
+  anthropicKeyVisible = !anthropicKeyVisible;
+  anthropicApiKeyInput.readOnly = false;
+  anthropicApiKeyInput.type = anthropicKeyVisible ? "text" : "password";
+  anthropicApiKeyInput.value = anthropicKeyVisible ? currentValue : currentValue;
+  renderApiKeyPanel();
+  anthropicApiKeyInput.focus();
+});
+deleteApiKeyButton?.addEventListener("click", deleteAnthropicKey);
+saveApiKeyButton?.addEventListener("click", saveAnthropicKeyFromInput);
+connectApiKeyButton?.addEventListener("click", connectAnthropic);
+verifyApiKeyButton?.addEventListener("click", () => verifyAnthropicConnection("verify"));
+disconnectApiKeyButton?.addEventListener("click", disconnectAnthropic);
+anthropicApiKeyInput?.addEventListener("input", () => {
+  anthropicConnected = false;
+  setApiKeyStatus("Änderung erkannt. Speichern prüft die Verbindung automatisch.", "info");
+  connectApiKeyButton?.classList.remove("success");
+  if (connectApiKeyButton) connectApiKeyButton.textContent = "Verbindung";
+});
+
+helpButton?.addEventListener("click", openHelp);
+helpCloseButton?.addEventListener("click", closeHelp);
+helpBackdrop?.addEventListener("click", closeHelp);
+helpSearchInput?.addEventListener("input", filterHelp);
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && helpOverlay.classList.contains("active")) {
+  if (event.key === "Escape" && helpOverlay?.classList.contains("active")) {
     closeHelp();
+  }
+  if (event.key === "Escape" && apiKeyOverlay?.classList.contains("active")) {
+    closeApiKeyPanel();
   }
 });
 
+window.addEventListener("error", (event) => {
+  showRuntimeError(event.error || event.message);
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  showRuntimeError(event.reason);
+});
+
 async function init() {
+  renderApiKeyPanel();
   render();
   if (isFileMode()) {
     loginLink.href = "http://localhost:8791/auth/start";
@@ -1090,10 +1692,20 @@ async function init() {
     return;
   }
 
-  const pageError = new URLSearchParams(window.location.search).get("error");
+  const pageError = (() => {
+    try {
+      return new URLSearchParams(window.location.search).get("error");
+    } catch {
+      return "";
+    }
+  })();
   if (pageError) {
     showNotice(pageError, "error");
-    window.history.replaceState({}, "", "/");
+    try {
+      window.history.replaceState({}, "", window.location.pathname || "/");
+    } catch {
+      // Some embedded browsers are strict about history URLs; the notice is enough.
+    }
     return;
   }
   try {

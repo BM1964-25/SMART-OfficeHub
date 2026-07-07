@@ -603,6 +603,164 @@ async function updateDraft(draftId, body) {
   });
 }
 
+function sanitizeApiError(data, fallback = "Anthropic-Verbindung fehlgeschlagen.") {
+  if (!data) return fallback;
+  if (typeof data === "string") return data.slice(0, 240);
+  return data.error?.message || data.message || fallback;
+}
+
+function requireAnthropicKey(apiKey = "") {
+  const trimmedKey = String(apiKey || "").trim();
+  if (!trimmedKey) {
+    const error = new Error("Bitte zuerst einen Anthropic API-Schlüssel eingeben.");
+    error.status = 400;
+    throw error;
+  }
+  if (!trimmedKey.startsWith("sk-ant-")) {
+    const error = new Error("Der Schlüssel sieht nicht wie ein Anthropic API-Schlüssel aus.");
+    error.status = 400;
+    throw error;
+  }
+  return trimmedKey;
+}
+
+async function anthropicFetch(pathname, apiKey, options = {}) {
+  let response;
+  try {
+    response = await fetch(`https://api.anthropic.com${pathname}`, {
+      ...options,
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        ...(options.headers || {})
+      }
+    });
+  } catch {
+    const error = new Error("Anthropic ist aktuell nicht erreichbar. Bitte Internetverbindung prüfen.");
+    error.status = 502;
+    throw error;
+  }
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const error = new Error(sanitizeApiError(data));
+    error.status = response.status || 502;
+    throw error;
+  }
+
+  return data;
+}
+
+async function listAnthropicModels(apiKey) {
+  const data = await anthropicFetch("/v1/models", apiKey, { method: "GET" });
+  return Array.isArray(data.data) ? data.data : [];
+}
+
+function chooseReplyModel(models = []) {
+  const ids = models.map((model) => model.id).filter(Boolean);
+  return ids.find((id) => /sonnet/i.test(id))
+    || ids.find((id) => /opus/i.test(id))
+    || ids.find((id) => /haiku/i.test(id))
+    || ids[0]
+    || "claude-sonnet-4-5";
+}
+
+async function testAnthropicConnection(apiKey = "") {
+  const trimmedKey = requireAnthropicKey(apiKey);
+  const models = await listAnthropicModels(trimmedKey);
+
+  return {
+    ok: true,
+    model: models[0]?.id || "Anthropic API",
+    availableModels: models.map((model) => model.id).slice(0, 8),
+    checkedAt: new Date().toISOString()
+  };
+}
+
+function compactForPrompt(value = "", maxLength = 6500) {
+  const compact = String(value || "").replace(/\s+/g, " ").trim();
+  return compact.length > maxLength ? `${compact.slice(0, maxLength)} ...` : compact;
+}
+
+function extractAnthropicText(data) {
+  const parts = Array.isArray(data.content) ? data.content : [];
+  return parts
+    .filter((part) => part.type === "text" && part.text)
+    .map((part) => part.text.trim())
+    .join("\n\n")
+    .trim();
+}
+
+async function generateAnthropicReply(body = {}) {
+  const apiKey = requireAnthropicKey(body.apiKey);
+  const email = body.email || {};
+  const tone = body.tone || "professionell";
+  const currentText = compactForPrompt(body.currentText || "", 2200);
+  const models = await listAnthropicModels(apiKey);
+  const model = chooseReplyModel(models);
+  const originalMail = compactForPrompt(email.bodyText || email.snippet || "", 8000);
+  const context = [
+    `Absender: ${email.from || "unbekannt"}`,
+    `Betreff: ${email.subject || "ohne Betreff"}`,
+    `Erkannte Kategorie: ${email.bucket || "unbekannt"}`,
+    `Priorität: ${email.priority || "unbekannt"}`,
+    `Gewünschte Tonalität: ${tone}`,
+    `Bisheriger Entwurf: ${currentText || "kein Entwurf vorhanden"}`,
+    `Originalmail: ${originalMail || "kein Mailtext verfügbar"}`
+  ].join("\n\n");
+
+  const prompt = [
+    "Erstelle einen hochwertigen deutschen Antwortentwurf für eine geschäftliche E-Mail.",
+    "Schreibe nur den fertigen E-Mail-Text, ohne Analyse, ohne Markdown, ohne Betreffzeile.",
+    "Nutze eine natürliche, professionelle Sprache. Keine Floskeln wie „Ich beziehe mich auf:“.",
+    "Gehe konkret auf Anliegen, Handlungsbedarf, Termine, Rückfragen oder Unterlagen ein.",
+    "Wenn die Mail um einen Termin bittet, schlage eine Terminabstimmung vor.",
+    "Wenn Angaben fehlen, frage präzise und freundlich danach.",
+    "Beende mit „Mit freundlichen Grüßen“ und „Bernhard Metzger“.",
+    "",
+    context
+  ].join("\n");
+
+  const data = await anthropicFetch("/v1/messages", apiKey, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 900,
+      temperature: 0.35,
+      messages: [
+        {
+          role: "user",
+          content: prompt
+        }
+      ]
+    })
+  });
+
+  const reply = extractAnthropicText(data);
+  if (!reply) {
+    const error = new Error("Claude hat keinen Antworttext zurückgegeben.");
+    error.status = 502;
+    throw error;
+  }
+
+  return {
+    reply,
+    model,
+    responseId: data.id || null,
+    usage: data.usage || null,
+    generatedAt: new Date().toISOString()
+  };
+}
+
 function readableTextFromBinary(buffer) {
   return buffer
     .toString("latin1")
@@ -730,6 +888,18 @@ async function router(req, res) {
 
     if (reqUrl.pathname === "/api/calendar/events") {
       return sendJson(res, 200, await listCalendarEvents(reqUrl));
+    }
+
+    if (reqUrl.pathname === "/api/anthropic/test" && req.method === "POST") {
+      const body = await readBody(req);
+      const result = await testAnthropicConnection(body.apiKey);
+      return sendJson(res, 200, { ok: true, result });
+    }
+
+    if (reqUrl.pathname === "/api/anthropic/reply" && req.method === "POST") {
+      const body = await readBody(req);
+      const result = await generateAnthropicReply(body);
+      return sendJson(res, 200, { ok: true, result });
     }
 
     const archiveMatch = reqUrl.pathname.match(/^\/api\/messages\/([^/]+)\/archive$/);
