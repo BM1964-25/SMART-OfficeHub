@@ -32,6 +32,28 @@ const workspaceMeta = {
     subline: "Assistenz für Priorisierung, Zusammenfassung, Antworttexte, Termine, Dokumente und Tagesplanung"
   }
 };
+const workspaceGuides = {
+  mails: {
+    label: "Mail-Arbeitsbereich",
+    text: "Hier werden E-Mails übersichtlich sortiert: Welche Nachricht braucht eine Antwort, welche muss geprüft werden, welche enthält Termine oder reine Informationen?",
+    action: "Nächster Schritt: Mail öffnen, Zusammenfassung prüfen, Originalmail kontrollieren und Entwurf erstellen oder aktualisieren."
+  },
+  termine: {
+    label: "Termin-Arbeitsbereich",
+    text: "Hier stehen echte Kalendereinträge aus verbundenen Kalendern sowie terminrelevante Arbeitsinformationen im Fokus.",
+    action: "Nächster Schritt: Termin prüfen, Vorbereitungsbedarf erkennen und fehlende Informationen oder Zeitfenster klären."
+  },
+  dokumente: {
+    label: "Dokumenten-Arbeitsbereich",
+    text: "Hier werden Anhänge und Unterlagen als eigene Arbeitsliste sichtbar, damit Rechnungen, Angebote, Verträge und Prüfunterlagen nicht in Mails untergehen.",
+    action: "Nächster Schritt: Dokumenttyp, Fristen, Beträge, Risiken und Rückfragen prüfen."
+  },
+  ki: {
+    label: "KI Übersicht",
+    text: "Hier bündelt SMART OfficeHub wichtige Hinweise aus Mails, Terminen und Dokumenten zu einer Prioritätenliste.",
+    action: "Nächster Schritt: wichtigste Hinweise zuerst prüfen und danach in den jeweiligen Arbeitsbereich wechseln."
+  }
+};
 const workspaceOrder = ["mails", "termine", "dokumente", "ki"];
 let emails = [];
 let calendarEvents = [];
@@ -61,6 +83,7 @@ const dashboardTitleEl = document.querySelector("#dashboardTitle");
 const dashboardSublineEl = document.querySelector("#dashboardSubline");
 const summaryEl = document.querySelector("#summary");
 const workspaceTabsEl = document.querySelector("#workspaceTabs");
+const workspaceGuideEl = document.querySelector("#workspaceGuide");
 const tabsEl = document.querySelector("#tabs");
 const listEl = document.querySelector("#mailList");
 const detailEl = document.querySelector("#detail");
@@ -239,7 +262,7 @@ async function connectAnthropic() {
   await verifyAnthropicConnection("connect");
 }
 
-async function generateClaudeReply(email, tone, currentText) {
+async function generateKiReply(email, tone, currentText) {
   if (!anthropicApiKey) {
     openApiKeyPanel();
     throw new Error("Bitte zuerst den Anthropic API-Schlüssel speichern und die Verbindung prüfen.");
@@ -405,15 +428,45 @@ function escapeHtml(value = "") {
     .replace(/'/g, "&#39;");
 }
 
+function fitDraftTextarea(textarea) {
+  if (!textarea) return;
+  textarea.style.height = "auto";
+  textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 280), 720)}px`;
+}
+
 async function api(path, options = {}) {
-  const response = await fetch(path, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
+  let response;
+  try {
+    response = await fetch(path, {
+      ...options,
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+      }
+    });
+  } catch (error) {
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    try {
+      response = await fetch(path, {
+        ...options,
+        cache: "no-store",
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {})
+        }
+      });
+    } catch {
+      throw new Error("Lokaler OfficeHub-Server nicht erreichbar. Bitte http://localhost:8791 neu laden oder den Server mit npm start neu starten.");
     }
-  });
-  const data = await response.json();
+  }
+
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error("Der lokale Server hat keine lesbare Antwort zurückgegeben.");
+  }
   if (!response.ok) throw new Error(data.error || "Aktion fehlgeschlagen.");
   return data;
 }
@@ -752,6 +805,17 @@ function renderWorkspaceTabs() {
   });
 }
 
+function renderWorkspaceGuide() {
+  const guide = workspaceGuides[activeWorkspace] || workspaceGuides.mails;
+  workspaceGuideEl.innerHTML = `
+    <div>
+      <strong>${escapeHtml(guide.label)}</strong>
+      <p>${escapeHtml(guide.text)}</p>
+    </div>
+    <span>${escapeHtml(guide.action)}</span>
+  `;
+}
+
 function renderTabs() {
   tabsEl.hidden = activeWorkspace !== "mails";
   if (activeWorkspace !== "mails") {
@@ -788,9 +852,9 @@ function renderList() {
   const list = filteredItems();
   if (!list.length) {
     const emptyText = activeWorkspace === "termine"
-      ? "Keine kommenden Google-Calendar-Termine gefunden."
+      ? "Keine kommenden Kalendereinträge gefunden."
       : activeWorkspace === "dokumente"
-        ? "Keine Gmail-Anhänge im geladenen Posteingang gefunden."
+        ? "Keine Anhänge im geladenen Posteingang gefunden."
         : activeWorkspace === "ki"
           ? "Keine KI-Hinweise mit Priorität gefunden."
           : "Keine passenden E-Mails gefunden.";
@@ -940,7 +1004,7 @@ function renderDocumentAnalysis(key) {
           <span>Inhaltsanalyse</span>
           <small>wird geladen</small>
         </div>
-        <p>Dokumentinhalt wird aus Gmail geladen und geprüft ...</p>
+        <p>Dokumentinhalt wird geladen und geprüft ...</p>
       </section>
     `;
   }
@@ -1127,7 +1191,7 @@ function attachmentSection(email) {
           </li>
         `)
         .join("")
-    : "<li><strong>Kein Gmail-Anhang erkannt</strong><span>Diese Mail wurde wegen dokumenttypischer Begriffe eingeordnet.</span></li>";
+    : "<li><strong>Kein Anhang erkannt</strong><span>Diese Mail wurde wegen dokumenttypischer Begriffe eingeordnet.</span></li>";
   return `
     <section class="attachmentBox">
       <div class="summaryHead">
@@ -1476,7 +1540,7 @@ function renderDocumentDetail(item) {
       <a class="button primary" href="${email.gmailUrl}" target="_blank" rel="noreferrer">Quellmail in Gmail öffnen</a>
       <button class="button secondary" type="button" id="analyzeDocumentButton">Dokumentinhalt analysieren</button>
     </div>
-    <div class="systemNotice">Dieses Dokument ist ein echter Gmail-Anhang. Über „Dokumentinhalt analysieren“ wird der Anhang aus Gmail geladen und soweit möglich textlich ausgewertet. Text, CSV, HTML und einfache PDF-Texte funktionieren direkt; Word/Excel benötigen später einen Spezialparser.</div>
+    <div class="systemNotice">Dieses Dokument ist ein echter Nachrichtenanhang. Über „Dokumentinhalt analysieren“ wird der Anhang geladen und soweit möglich textlich ausgewertet. Text, CSV, HTML und einfache PDF-Texte funktionieren direkt; Word/Excel benötigen später einen Spezialparser.</div>
     ${renderDocumentAnalysis(key)}
     <details class="mailBodyBox">
       <summary>
@@ -1519,7 +1583,8 @@ function renderEmailDetail(email) {
             <option value="verbindlich">verbindlich</option>
           </select>
         </label>
-        <button class="button secondary" type="button" id="improveDraftButton">Mit Claude verbessern</button>
+        <button class="button secondary" type="button" id="improveDraftButton">Mit KI verbessern</button>
+        <span class="draftToneHint">Tonalität wird beim KI-Lauf angewendet.</span>
       </div>
       <div class="actions">
         <button class="button secondary" type="button" id="draftButton">${existingDraftId ? "Entwurf in Gmail aktualisieren" : "Entwurf in Gmail erstellen"}</button>
@@ -1572,20 +1637,24 @@ function renderEmailDetail(email) {
   detailEl.querySelector("#archiveButton").addEventListener("click", () => archiveEmail(email));
   detailEl.querySelector("#trashButton").addEventListener("click", () => trashEmail(email));
   detailEl.querySelector("#draftButton")?.addEventListener("click", () => createDraft(email));
+  const draftTextarea = detailEl.querySelector("#draftText");
+  fitDraftTextarea(draftTextarea);
+  draftTextarea?.addEventListener("input", () => fitDraftTextarea(draftTextarea));
   detailEl.querySelector("#improveDraftButton")?.addEventListener("click", async () => {
     const textarea = detailEl.querySelector("#draftText");
     const button = detailEl.querySelector("#improveDraftButton");
     const tone = detailEl.querySelector("#draftTone")?.value || "professionell";
     const previousLabel = button.textContent;
     button.disabled = true;
-    button.textContent = "Claude formuliert ...";
-    showNotice("Claude erstellt einen individuellen Antwortentwurf ...");
+    button.textContent = "KI formuliert ...";
+    showNotice("Die KI erstellt einen individuellen Antwortentwurf ...");
     try {
-      const result = await generateClaudeReply(email, tone, textarea.value);
+      const result = await generateKiReply(email, tone, textarea.value);
       textarea.value = result.reply;
-      showNotice(`Claude-Entwurf wurde erstellt${result.model ? ` (${result.model})` : ""}. Gmail wird erst beim Erstellen oder Aktualisieren geändert.`);
+      fitDraftTextarea(textarea);
+      showNotice(`KI-Entwurf wurde erstellt${result.model ? ` (${result.model})` : ""}. Gmail wird erst beim Erstellen oder Aktualisieren geändert.`);
     } catch (error) {
-      showNotice(error.message || "Claude konnte keinen Entwurf erstellen.", "error");
+      showNotice(error.message || "Die KI konnte keinen Entwurf erstellen.", "error");
     } finally {
       button.disabled = false;
       button.textContent = previousLabel;
@@ -1615,6 +1684,7 @@ function render() {
   renderDashboardHeading();
   renderSummary();
   renderWorkspaceTabs();
+  renderWorkspaceGuide();
   renderTabs();
   renderList();
   renderDetail();

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>SMART OfficeHub</title>
-    <link rel="stylesheet" href="./styles.css?v=officehub-draft-tools-20260707">
+    <link rel="stylesheet" href="./styles.css?v=officehub-tone-compact-20260707">
   </head>
   <body>
     <header class="topbar">
@@ -26,6 +26,7 @@
       <section class="summary" aria-label="Kennzahlen" id="summary"></section>
 
       <nav class="workspaceTabs" id="workspaceTabs" aria-label="Arbeitsbereiche"></nav>
+      <section class="workspaceGuide" id="workspaceGuide" aria-label="Arbeitsbereich Orientierung"></section>
 
       <section class="toolbar" aria-label="Filter">
         <div class="tabs" id="tabs"></div>
@@ -64,6 +65,7 @@
             <a href="#help-access">Einrichtung & Zugang</a>
             <a href="#help-quickstart">Schnellstart</a>
             <a href="#help-ui">Bedienoberfläche</a>
+            <a href="#help-benefits">Vorteile</a>
             <a href="#help-functions">Wichtige Funktionen</a>
             <a href="#help-workflow">Typischer Workflow</a>
             <a href="#help-data">Eingaben & Daten</a>
@@ -75,7 +77,7 @@
           <div class="helpContent" id="helpContent">
             <article class="helpSection" id="help-overview">
               <h3>Überblick</h3>
-              <p>SMART OfficeHub bündelt Gmail, Google Calendar und Gmail-Anhänge in einem lokalen Arbeitscockpit. Die App hilft beim Sichten von Mails, Erstellen oder Aktualisieren von Gmail-Entwürfen, Prüfen kommender Termine und Ordnen von Dokumentanhängen.</p>
+              <p>SMART OfficeHub bündelt E-Mails, Kalendertermine und Dokumentanhänge in einem lokalen Arbeitscockpit. Die App hilft beim Sichten von Nachrichten, Erstellen oder Aktualisieren von Antwortentwürfen, Prüfen kommender Termine und Ordnen von Dokumentanhängen.</p>
               <p>Die Basisfunktionen benötigen keine externe KI. Die aktuelle KI-Übersicht arbeitet lokal mit den geladenen Mail-, Termin- und Dokumentdaten und hilft beim Priorisieren, Zusammenfassen und Formulieren.</p>
             </article>
 
@@ -115,23 +117,46 @@
 
             <article class="helpSection" id="help-ui">
               <h3>Bedienoberfläche</h3>
-              <p>Oben stehen Kennzahlen und die Arbeitsbereiche. „Mails“ zeigt Gmail-Nachrichten, „Termine“ zeigt Google-Calendar-Einträge aus allen sichtbaren Kalendern, „Dokumente“ zeigt Gmail-Anhänge als Arbeitsliste. „KI Übersicht“ bündelt wichtige Hinweise aus Mails, Terminen und Dokumenten. Links steht die Liste, rechts der Detailbereich.</p>
+              <p>Die App ist in vier Arbeitsbereiche gegliedert: Mails, Termine, Dokumente und KI Übersicht. Oben zeigen Kennzahlen den Gesamtbestand. Darunter wählen Sie den Arbeitsbereich. Links steht die jeweilige Liste, rechts der Detailbereich mit Zusammenfassung, Originalinhalt, Bewertung und möglichen Aktionen.</p>
+              <p>Die Bereiche sind bewusst getrennt: Mails dienen der Kommunikation, Termine der Planung, Dokumente der Prüfung von Anhängen und KI Übersicht der Priorisierung über alle Bereiche hinweg.</p>
+            </article>
+
+            <article class="helpSection" id="help-benefits">
+              <h3>Vorteile von Terminen und Dokumenten</h3>
+              <h4>Termine</h4>
+              <ul>
+                <li>Sie sehen nicht nur Mails mit Terminbezug, sondern echte Kalendereinträge aus verbundenen und sichtbaren Kalendern.</li>
+                <li>Termine können nach Vorbereitung, fehlenden Informationen und Dringlichkeit bewertet werden.</li>
+                <li>Terminabstimmungen aus Mails lassen sich schneller erkennen und in passende Antwortentwürfe überführen.</li>
+                <li>Apple-Kalender, die in Google eingebunden sind, können sichtbar werden, sobald sie im Google Kalender verfügbar und synchronisiert sind.</li>
+                <li>Der Vorteil im Alltag: weniger Suchen zwischen Mail, Kalender und Antwortentwurf.</li>
+              </ul>
+              <h4>Dokumente</h4>
+              <ul>
+                <li>Der Dokumentbereich sammelt Anhänge und Unterlagen als eigene Arbeitsliste, damit wichtige Dokumente nicht in einzelnen Mails untergehen.</li>
+                <li>Anhänge können als Rechnung, Angebot, Vertrag, Protokoll, Formular oder allgemeine Unterlage eingeordnet werden.</li>
+                <li>Fristen, Beträge, Risiken, Rückfragen und Prüfbedarf können schneller erkannt werden.</li>
+                <li>Dokumente lassen sich unabhängig von der Mail als Aufgabe betrachten: prüfen, nachfragen, freigeben, archivieren oder für einen Entwurf nutzen.</li>
+                <li>Der Vorteil im Alltag: Dokumente werden vom Mailverkehr getrennt und als prüfbare Arbeitsobjekte sichtbar.</li>
+              </ul>
+              <h4>KI Übersicht</h4>
+              <p>Die KI Übersicht führt wichtige Hinweise aus Mails, Terminen und Dokumenten zusammen. Sie ist der schnelle Blick auf „Was ist jetzt wichtig?“ und ersetzt nicht die Prüfung der Originaldaten.</p>
             </article>
 
             <article class="helpSection" id="help-functions">
               <h3>Wichtige Funktionen</h3>
               <ul>
                 <li>Mails nach Antwortbedarf, Prüfung, Terminen, Info und Werbung sortieren.</li>
-                <li>Antwortentwürfe in Gmail erstellen oder vorhandene Entwürfe aktualisieren.</li>
-                <li>Echte Google-Calendar-Termine aus allen sichtbaren Kalendern lesen.</li>
-                <li>Gmail-Anhänge als Dokumente erfassen, typisieren und mit Status versehen.</li>
+                <li>Antwortentwürfe erstellen oder vorhandene Entwürfe aktualisieren.</li>
+                <li>Echte Termine aus allen sichtbaren Kalendern lesen.</li>
+                <li>Anhänge als Dokumente erfassen, typisieren und mit Status versehen.</li>
                 <li>Dokumentinhalt bei Bedarf laden und einfache Textanalyse ausführen.</li>
               </ul>
               <h4>KI-Aufgaben</h4>
               <ul>
                 <li>Mails nach Dringlichkeit, Antwortbedarf und Kontext bewerten.</li>
                 <li>Mail-Zusammenfassungen mit Kernaussage, Handlungsbedarf und Kontext anzeigen.</li>
-                <li>Antwortentwürfe über Claude in den Tonalitäten professionell, freundlich, kurz oder verbindlich formulieren lassen.</li>
+                <li>Antwortentwürfe über KI in den Tonalitäten professionell, freundlich, kurz oder verbindlich formulieren lassen.</li>
                 <li>Termine nach Vorbereitungsbedarf, fehlenden Angaben und Dringlichkeit auswerten.</li>
                 <li>Dokumente nach Fristen, Beträgen, Risiken und Analysebedarf prüfen.</li>
                 <li>Eine Tagesübersicht mit den wichtigsten KI-Hinweisen erzeugen.</li>
@@ -140,12 +165,12 @@
 
             <article class="helpSection" id="help-workflow">
               <h3>Typischer Workflow</h3>
-              <p>Posteingang aktualisieren, Arbeitsbereich wählen, wichtigste Einträge prüfen, vollständige Mail oder Dokumentdetails öffnen, Status setzen und bei Bedarf einen Gmail-Entwurf erstellen oder aktualisieren.</p>
+              <p>Posteingang aktualisieren, Arbeitsbereich wählen, wichtigste Einträge prüfen, vollständige Mail oder Dokumentdetails öffnen, Status setzen und bei Bedarf einen Antwortentwurf erstellen oder aktualisieren.</p>
             </article>
 
             <article class="helpSection" id="help-data">
               <h3>Eingaben & Daten</h3>
-              <p>SMART OfficeHub liest Gmail-Nachrichten, Gmail-Entwürfe, Gmail-Anhangmetadaten und Google-Calendar-Termine. OAuth-Tokens liegen lokal im Projektordner. Dokumentstatus und Entwurfszuordnung werden aktuell in der Browsersitzung gespeichert.</p>
+              <p>SMART OfficeHub liest E-Mails, Antwortentwürfe, Anhangmetadaten und Kalendereinträge aus den verbundenen Konten. OAuth-Tokens liegen lokal im Projektordner. Dokumentstatus und Entwurfszuordnung werden aktuell in der Browsersitzung gespeichert.</p>
             </article>
 
             <article class="helpSection" id="help-results">
@@ -158,14 +183,14 @@
               <ul>
                 <li>Google Login funktioniert nicht: App über http://localhost:8791 öffnen, nicht als Datei.</li>
                 <li>Keine Kalendertermine: Prüfen, ob der Kalender in Google sichtbar ist und die Calendar API aktiv ist.</li>
-                <li>Keine Dokumente: Nur echte Gmail-Anhänge erscheinen im Dokumentbereich.</li>
+                <li>Keine Dokumente: Nur echte Anhänge aus geladenen Nachrichten erscheinen im Dokumentbereich.</li>
                 <li>Dokumentanalyse leer: Der Dateityp benötigt eventuell einen Spezialparser.</li>
               </ul>
             </article>
 
             <article class="helpSection" id="help-version">
               <h3>Version & Hinweise</h3>
-              <p>Lokale SMART OfficeHub-Version für Gmail, Google Calendar und Dokumentanhänge. Die App verlässt beim Öffnen der Hilfe nicht die aktuelle Ansicht; Eingaben im Arbeitsbereich bleiben erhalten.</p>
+              <p>Lokale SMART OfficeHub-Version für E-Mail, Kalender und Dokumentanhänge. Die App verlässt beim Öffnen der Hilfe nicht die aktuelle Ansicht; Eingaben im Arbeitsbereich bleiben erhalten.</p>
             </article>
           </div>
         </div>
@@ -221,6 +246,6 @@
       </section>
     </aside>
 
-    <script src="./app.js?v=officehub-claude-reply-20260707"></script>
+    <script src="./app.js?v=officehub-general-wording-20260707b"></script>
   </body>
 </html>

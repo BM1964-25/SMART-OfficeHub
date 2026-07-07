@@ -635,8 +635,9 @@ async function anthropicFetch(pathname, apiKey, options = {}) {
         ...(options.headers || {})
       }
     });
-  } catch {
-    const error = new Error("Anthropic ist aktuell nicht erreichbar. Bitte Internetverbindung prüfen.");
+  } catch (cause) {
+    const detail = cause?.message ? ` (${cause.message})` : "";
+    const error = new Error(`Anthropic ist aktuell nicht erreichbar. Bitte Internetverbindung prüfen.${detail}`);
     error.status = 502;
     throw error;
   }
@@ -697,6 +698,40 @@ function extractAnthropicText(data) {
     .trim();
 }
 
+function toneInstruction(tone = "professionell") {
+  const instructions = {
+    professionell: [
+      "Tonalität professionell:",
+      "Sehr sachlich, klar, seriös und geschäftlich formulieren.",
+      "Keine zusätzliche Herzlichkeit, keine emotionalen Formulierungen, keine Umgangssprache.",
+      "Der Text soll kompakt, souverän und beratend wirken.",
+      "Struktur: Dank, kurze fachliche Einordnung, nächster Schritt."
+    ].join(" "),
+    freundlich: [
+      "Tonalität freundlich:",
+      "Deutlich wärmer, persönlicher und zugewandter formulieren als bei professionell.",
+      "Positives Interesse am Anliegen zeigen, ohne werblich zu klingen.",
+      "Nutze verbindende Formulierungen wie „das klingt nach einem spannenden Ansatz“, „ich freue mich auf den Austausch“ oder „gerne schauen wir gemeinsam darauf“.",
+      "Der Text darf einen zusätzlichen freundlichen Satz enthalten und soll weniger nüchtern wirken."
+    ].join(" "),
+    kurz: [
+      "Tonalität kurz:",
+      "Sehr kompakt formulieren.",
+      "Maximal 90 bis 130 Wörter.",
+      "Keine langen Erklärungen, keine ausführliche Analyse.",
+      "Direkt zum nächsten Schritt kommen."
+    ].join(" "),
+    verbindlich: [
+      "Tonalität verbindlich:",
+      "Konkreter, entschlossener und handlungsorientierter formulieren.",
+      "Klare Zusage, konkreter nächster Schritt und eindeutige Erwartung an Terminvorschläge oder Unterlagen.",
+      "Keine vagen Formulierungen wie „ggf.“, „bei Bedarf“ oder „können Sie gerne“.",
+      "Der Text soll entscheidungsstark wirken und den nächsten Schritt klar führen."
+    ].join(" ")
+  };
+  return instructions[tone] || instructions.professionell;
+}
+
 async function generateAnthropicReply(body = {}) {
   const apiKey = requireAnthropicKey(body.apiKey);
   const email = body.email || {};
@@ -718,7 +753,15 @@ async function generateAnthropicReply(body = {}) {
   const prompt = [
     "Erstelle einen hochwertigen deutschen Antwortentwurf für eine geschäftliche E-Mail.",
     "Schreibe nur den fertigen E-Mail-Text, ohne Analyse, ohne Markdown, ohne Betreffzeile.",
-    "Nutze eine natürliche, professionelle Sprache. Keine Floskeln wie „Ich beziehe mich auf:“.",
+    "Formatiere den Entwurf als gut lesbare E-Mail mit Absätzen und Leerzeilen: Anrede, kurzer Einstieg, Hauptteil, nächster Schritt, Grußformel.",
+    "Vermeide lange Textblöcke. Jeder Absatz soll höchstens zwei Sätze enthalten.",
+    "Nutze eine natürliche Sprache. Keine Floskeln wie „Ich beziehe mich auf:“.",
+    toneInstruction(tone),
+    "Die gewählte Tonalität muss im fertigen Text deutlich erkennbar sein.",
+    "Formuliere nicht nur den bisherigen Entwurf um. Schreibe bewusst einen neuen Antworttext, der zur gewählten Tonalität passt.",
+    "Wenn die Tonalität freundlich gewählt ist, muss der Text sichtbar wärmer sein als eine professionelle Standardantwort.",
+    "Wenn die Tonalität professionell gewählt ist, muss der Text sichtbar nüchterner und geschäftlicher sein als eine freundliche Antwort.",
+    "Vermeide identische Satzfolgen über verschiedene Tonalitäten hinweg.",
     "Gehe konkret auf Anliegen, Handlungsbedarf, Termine, Rückfragen oder Unterlagen ein.",
     "Wenn die Mail um einen Termin bittet, schlage eine Terminabstimmung vor.",
     "Wenn Angaben fehlen, frage präzise und freundlich danach.",
@@ -735,7 +778,6 @@ async function generateAnthropicReply(body = {}) {
     body: JSON.stringify({
       model,
       max_tokens: 900,
-      temperature: 0.35,
       messages: [
         {
           role: "user",
