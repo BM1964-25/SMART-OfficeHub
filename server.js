@@ -5,7 +5,8 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const localDir = path.join(__dirname, ".local");
+const isVercel = Boolean(process.env.VERCEL || process.env.VERCEL_URL);
+const localDir = isVercel ? path.join("/tmp", "smart-officehub") : path.join(__dirname, ".local");
 const tokenPath = path.join(localDir, "tokens.json");
 const configPath = path.join(__dirname, "config.local.json");
 const publicDir = path.join(__dirname, "public");
