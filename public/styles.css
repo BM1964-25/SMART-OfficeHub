@@ -1119,6 +1119,164 @@ body[data-workspace="ki"] .workspaceGuide {
   background: #e8f5f4;
 }
 
+.calendarOverview {
+  padding: 14px;
+  border-bottom: 1px solid var(--line);
+  background: #f8fbff;
+}
+
+.calendarOverviewHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.calendarOverviewHead strong {
+  display: block;
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.calendarOverviewHead span,
+.calendarFilter p,
+.calendarMuted {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.weekGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(86px, 1fr));
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.weekDay {
+  min-width: 86px;
+  min-height: 138px;
+  border: 1px solid #dbe4f0;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.weekDay.today {
+  border-color: #7aa8db;
+  background: #f2f8ff;
+}
+
+.weekDayHead {
+  padding: 8px;
+  border-bottom: 1px solid #edf2f7;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.weekDayEvents {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+}
+
+.weekEvent {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  border: 1px solid #d8d3f0;
+  border-radius: 7px;
+  padding: 7px;
+  background: #f7f5ff;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.weekEvent:hover {
+  border-color: #9a8fd8;
+  background: #efecff;
+}
+
+.weekEvent span {
+  color: #5f569f;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.weekEvent strong {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.25;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.weekEmpty {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.calendarFilter {
+  margin-top: 12px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 10px;
+}
+
+.calendarFilter summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.calendarToggleGrid {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.calendarToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #dbe4f0;
+  border-radius: 8px;
+  padding: 9px;
+  background: #fff;
+}
+
+.calendarToggle input {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.calendarToggle span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.calendarToggle strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.calendarToggle small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .mailHead {
   display: flex;
   align-items: flex-start;

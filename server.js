@@ -17,7 +17,8 @@ const tokenCookieName = "smart_officehub_google";
 const SCOPES = [
   "https://www.googleapis.com/auth/gmail.modify",
   "https://www.googleapis.com/auth/gmail.compose",
-  "https://www.googleapis.com/auth/calendar.readonly"
+  "https://www.googleapis.com/auth/calendar.readonly",
+  "https://www.googleapis.com/auth/calendar.events"
 ];
 
 const MIME = {
@@ -638,6 +639,12 @@ async function listCalendarEvents(reqUrl) {
   };
 }
 
+async function deleteCalendarEvent(calendarId, eventId) {
+  return googleCalendar(`/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`, {
+    method: "DELETE"
+  });
+}
+
 function base64Url(input) {
   return Buffer.from(input, "utf8")
     .toString("base64")
@@ -1012,6 +1019,14 @@ async function handleRequest(req, res) {
 
     if (reqUrl.pathname === "/api/calendar/events") {
       return sendJson(res, 200, await listCalendarEvents(reqUrl));
+    }
+
+    const calendarDeleteMatch = reqUrl.pathname.match(/^\/api\/calendar\/events\/([^/]+)\/([^/]+)$/);
+    if (calendarDeleteMatch && req.method === "DELETE") {
+      const calendarId = decodeURIComponent(calendarDeleteMatch[1]);
+      const eventId = decodeURIComponent(calendarDeleteMatch[2]);
+      await deleteCalendarEvent(calendarId, eventId);
+      return sendJson(res, 200, { ok: true });
     }
 
     if (reqUrl.pathname === "/api/anthropic/test" && req.method === "POST") {

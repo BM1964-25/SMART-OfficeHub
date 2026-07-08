@@ -63,6 +63,7 @@ const workspaceGuides = {
 const workspaceOrder = ["mails", "termine", "dokumente", "ki"];
 let emails = [];
 let calendarEvents = [];
+let calendars = [];
 let activeWorkspace = "mails";
 let activeBucket = "alle";
 let activeId = null;
@@ -76,9 +77,11 @@ const draftIdStorageKey = "smartOfficeHubDraftIds";
 const documentStatusStorageKey = "smartOfficeHubDocumentStatus";
 const anthropicApiKeyStorageKey = "smartOfficeHubAnthropicApiKey";
 const sidebarCollapsedStorageKey = "smartOfficeHubSidebarCollapsed";
+const hiddenCalendarsStorageKey = "smartOfficeHubHiddenCalendars";
 const draftCreatedIds = new Set(loadDraftCreatedIds());
 const draftIdsByEmail = loadDraftIds();
 const documentStatusByKey = loadDocumentStatus();
+const hiddenCalendarIds = new Set(loadHiddenCalendarIds());
 const documentAnalysisByKey = {};
 const autoKiDraftsByEmail = new Map();
 let anthropicApiKey = loadAnthropicApiKey();
@@ -418,6 +421,16 @@ function loadDocumentStatus() {
   }
 }
 
+function loadHiddenCalendarIds() {
+  try {
+    const stored = localStorage.getItem(hiddenCalendarsStorageKey);
+    const values = stored ? JSON.parse(stored) : [];
+    return Array.isArray(values) ? values : [];
+  } catch {
+    return [];
+  }
+}
+
 function loadAnthropicApiKey() {
   try {
     return localStorage.getItem(anthropicApiKeyStorageKey) || "";
@@ -436,6 +449,14 @@ function saveDraftIds() {
 
 function saveDocumentStatus() {
   sessionStorage.setItem(documentStatusStorageKey, JSON.stringify(documentStatusByKey));
+}
+
+function saveHiddenCalendarIds() {
+  try {
+    localStorage.setItem(hiddenCalendarsStorageKey, JSON.stringify([...hiddenCalendarIds]));
+  } catch {
+    showNotice("Die ausgeblendeten Kalender konnten nicht dauerhaft gespeichert werden.", "error");
+  }
 }
 
 function saveAnthropicApiKey(value) {
@@ -458,7 +479,8 @@ function exportOfficeHubBackup() {
       [documentStatusStorageKey]: documentStatusByKey
     },
     local: {
-      [sidebarCollapsedStorageKey]: sidebarCollapsed
+      [sidebarCollapsedStorageKey]: sidebarCollapsed,
+      [hiddenCalendarsStorageKey]: [...hiddenCalendarIds]
     }
   };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
@@ -483,6 +505,9 @@ async function importOfficeHubBackup(file) {
     }
     if (session[documentStatusStorageKey] && typeof session[documentStatusStorageKey] === "object") {
       sessionStorage.setItem(documentStatusStorageKey, JSON.stringify(session[documentStatusStorageKey]));
+    }
+    if (Array.isArray(backup?.local?.[hiddenCalendarsStorageKey])) {
+      localStorage.setItem(hiddenCalendarsStorageKey, JSON.stringify(backup.local[hiddenCalendarsStorageKey]));
     }
     showNotice("Datensicherung wurde wiederhergestellt. Die Ansicht wird neu geladen.");
     setTimeout(() => window.location.reload(), 650);
@@ -656,6 +681,7 @@ async function loadEmails() {
     api("/api/calendar/events")
   ]);
   emails = result.emails;
+  calendars = calendarResult.calendars || [];
   calendarEvents = calendarResult.events || [];
   inboxStats = {
     smartBookingCount14d: result.smartBookingCount14d || 0,
@@ -709,15 +735,27 @@ function workspaceEmails(workspace = activeWorkspace) {
   return emails;
 }
 
+function visibleCalendarEvents() {
+  return calendarEvents.filter((event) => !hiddenCalendarIds.has(event.calendarId));
+}
+
+function visibleCalendarCount() {
+  return calendars.filter((calendar) => !hiddenCalendarIds.has(calendar.id)).length;
+}
+
+function calendarEventKey(event) {
+  return `event:${event.calendarId || "calendar"}:${event.id}`;
+}
+
 function workspaceCount(workspace) {
-  if (workspace === "termine") return calendarEvents.length;
+  if (workspace === "termine") return visibleCalendarEvents().length;
   if (workspace === "dokumente") return documentItems().length;
   if (workspace === "ki") return aiDailyItems().length;
   return workspaceEmails(workspace).length;
 }
 
 function itemKey(item) {
-  return item.kind === "event" ? `event:${item.event.id}` : `mail:${item.email.id}`;
+  return item.kind === "event" ? calendarEventKey(item.event) : `mail:${item.email.id}`;
 }
 
 function itemSearchText(item) {
@@ -899,7 +937,7 @@ function aiDailyItems() {
   const emailItems = emails
     .map((email) => ({ kind: "ai", aiType: "mail", key: `ai:mail:${email.id}`, email, assessment: aiEmailAssessment(email) }))
     .filter((item) => item.assessment.priority !== "niedrig" || item.assessment.replyNeeded || isDocumentEmail(item.email));
-  const eventItems = calendarEvents
+  const eventItems = visibleCalendarEvents()
     .map((event) => ({ kind: "ai", aiType: "termin", key: `ai:event:${event.id}`, event, assessment: aiEventAssessment(event) }))
     .filter((item) => item.assessment.priority !== "niedrig");
   const docItems = documentItems()
@@ -913,7 +951,7 @@ function aiDailyItems() {
 
 function workspaceItems() {
   if (activeWorkspace === "termine") {
-    return calendarEvents.map((event) => ({ kind: "event", key: `event:${event.id}`, event }));
+    return visibleCalendarEvents().map((event) => ({ kind: "event", key: calendarEventKey(event), event }));
   }
   if (activeWorkspace === "dokumente") {
     return documentItems();
@@ -1021,6 +1059,117 @@ function filteredItems() {
   });
 }
 
+function startOfWeek(date = new Date()) {
+  const value = new Date(date);
+  value.setHours(0, 0, 0, 0);
+  const day = value.getDay() || 7;
+  value.setDate(value.getDate() - day + 1);
+  return value;
+}
+
+function calendarWeekDays() {
+  const start = startOfWeek(new Date());
+  return Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(start);
+    day.setDate(start.getDate() + index);
+    return day;
+  });
+}
+
+function isSameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function formatWeekday(date) {
+  return new Intl.DateTimeFormat("de-DE", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit"
+  }).format(date);
+}
+
+function formatEventTime(event) {
+  if (event.isAllDay) return "Ganztägig";
+  const start = event.start ? new Date(event.start) : null;
+  if (!start || Number.isNaN(start.getTime())) return "Zeit offen";
+  return new Intl.DateTimeFormat("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(start);
+}
+
+function renderCalendarWorkspaceHeader(list) {
+  const hiddenCount = calendars.filter((calendar) => hiddenCalendarIds.has(calendar.id)).length;
+  const weekDays = calendarWeekDays();
+  const weekEnd = new Date(weekDays[6]);
+  weekEnd.setHours(23, 59, 59, 999);
+  const weekEvents = list
+    .filter((item) => {
+      const date = new Date(item.event.timestamp || item.event.start || 0);
+      return !Number.isNaN(date.getTime()) && date >= weekDays[0] && date <= weekEnd;
+    })
+    .map((item) => item.event);
+  const calendarControls = calendars.length
+    ? calendars
+        .map((calendar) => {
+          const checked = hiddenCalendarIds.has(calendar.id) ? "" : "checked";
+          const count = calendarEvents.filter((event) => event.calendarId === calendar.id).length;
+          return `
+            <label class="calendarToggle">
+              <input type="checkbox" data-calendar-id="${escapeHtml(calendar.id)}" ${checked}>
+              <span>
+                <strong>${escapeHtml(calendar.summary || "Kalender")}</strong>
+                <small>${count} Termin${count === 1 ? "" : "e"}</small>
+              </span>
+            </label>
+          `;
+        })
+        .join("")
+    : '<p class="calendarMuted">Keine Kalenderdaten geladen.</p>';
+
+  const weekGrid = weekDays
+    .map((day) => {
+      const eventsForDay = weekEvents.filter((event) => {
+        const date = new Date(event.timestamp || event.start || 0);
+        return !Number.isNaN(date.getTime()) && isSameDay(date, day);
+      });
+      const dayEvents = eventsForDay.length
+        ? eventsForDay
+            .map((event) => `
+              <button class="weekEvent" type="button" data-id="${escapeHtml(calendarEventKey(event))}">
+                <span>${escapeHtml(formatEventTime(event))}</span>
+                <strong>${escapeHtml(event.title)}</strong>
+              </button>
+            `)
+            .join("")
+        : '<span class="weekEmpty">frei</span>';
+      return `
+        <div class="weekDay ${isSameDay(day, new Date()) ? "today" : ""}">
+          <div class="weekDayHead">${escapeHtml(formatWeekday(day))}</div>
+          <div class="weekDayEvents">${dayEvents}</div>
+        </div>
+      `;
+    })
+    .join("");
+
+  return `
+    <section class="calendarOverview" aria-label="Kalenderübersicht">
+      <div class="calendarOverviewHead">
+        <div>
+          <strong>Wochenübersicht</strong>
+          <span>${list.length} kommende Termine · ${visibleCalendarCount()} Kalender sichtbar${hiddenCount ? ` · ${hiddenCount} ausgeblendet` : ""}</span>
+        </div>
+      </div>
+      <div class="weekGrid">${weekGrid}</div>
+      <details class="calendarFilter" ${hiddenCount ? "open" : ""}>
+        <summary>Kalender anzeigen oder ausblenden</summary>
+        <div class="calendarToggleGrid">${calendarControls}</div>
+        <p>Ausblenden ändert nur die Anzeige in SMART OfficeHub. Der Kalender bleibt in Google unverändert.</p>
+      </details>
+    </section>
+  `;
+}
+
 function renderList() {
   const list = filteredItems();
   if (!list.length) {
@@ -1031,14 +1180,15 @@ function renderList() {
         : activeWorkspace === "ki"
           ? "Keine KI-Hinweise mit Priorität gefunden."
           : "Keine passenden E-Mails gefunden.";
-    listEl.innerHTML = `<div class="empty">${emptyText}</div>`;
+    listEl.innerHTML = `${activeWorkspace === "termine" ? renderCalendarWorkspaceHeader(list) : ""}<div class="empty">${emptyText}</div>`;
     detailEl.innerHTML = '<div class="empty">Aktualisiere den Posteingang oder passe die Suche an.</div>';
+    attachCalendarListControls();
     return;
   }
 
   if (!list.some((item) => item.key === activeId)) activeId = list[0].key;
 
-  listEl.innerHTML = list
+  const renderedItems = list
     .map((item) => {
       if (item.kind === "event") return renderCalendarListItem(item.event, item.key);
       if (item.kind === "document") return renderDocumentListItem(item);
@@ -1073,10 +1223,25 @@ function renderList() {
       `;
     })
     .join("");
+  listEl.innerHTML = `${activeWorkspace === "termine" ? renderCalendarWorkspaceHeader(list) : ""}${renderedItems}`;
 
-  listEl.querySelectorAll("button").forEach((button) => {
+  attachCalendarListControls();
+  listEl.querySelectorAll("button[data-id]").forEach((button) => {
     button.addEventListener("click", () => {
       activeId = button.dataset.id;
+      render();
+    });
+  });
+}
+
+function attachCalendarListControls() {
+  if (activeWorkspace !== "termine") return;
+  listEl.querySelectorAll(".calendarToggle input").forEach((input) => {
+    input.addEventListener("change", () => {
+      if (input.checked) hiddenCalendarIds.delete(input.dataset.calendarId);
+      else hiddenCalendarIds.add(input.dataset.calendarId);
+      saveHiddenCalendarIds();
+      activeId = filteredItems()[0]?.key || null;
       render();
     });
   });
@@ -1604,7 +1769,7 @@ function renderAiDetail(item) {
     `;
     detailEl.querySelector("#openAiSource").addEventListener("click", () => {
       activeWorkspace = "termine";
-      activeId = `event:${item.event.id}`;
+      activeId = calendarEventKey(item.event);
       render();
     });
     return;
@@ -1637,6 +1802,13 @@ async function trashEmail(email) {
   if (!confirm(`E-Mail in den Papierkorb verschieben?\n\n${email.subject}`)) return;
   await api(`/api/messages/${email.id}/trash`, { method: "POST" });
   showNotice("E-Mail wurde in den Papierkorb verschoben.");
+  await loadEmails();
+}
+
+async function deleteCalendarEvent(event) {
+  if (!confirm(`Termin wirklich in Google Kalender löschen?\n\n${event.title}\n${formatEventRange(event)}\n\nDiese Aktion löscht den Termin im verbundenen Google Kalender. Ausblenden wäre nur eine Anzeige-Einstellung in SMART OfficeHub.`)) return;
+  await api(`/api/calendar/events/${encodeURIComponent(event.calendarId)}/${encodeURIComponent(event.id)}`, { method: "DELETE" });
+  showNotice("Termin wurde in Google Kalender gelöscht.");
   await loadEmails();
 }
 
@@ -1706,8 +1878,9 @@ function renderCalendarDetail(event) {
     </div>
     <div class="actions">
       ${event.htmlLink ? `<a class="button primary" href="${event.htmlLink}" target="_blank" rel="noreferrer">In Google Kalender öffnen</a>` : ""}
+      <button class="button danger" type="button" id="deleteCalendarEventButton">Termin löschen</button>
     </div>
-    <div class="systemNotice">Dieser Eintrag kommt direkt aus Google Calendar. SMART OfficeHub liest alle sichtbaren Google-Kalender, darunter auch eingebundene Kalender wie „privat“, sofern Google sie über die Calendar API bereitstellt.</div>
+    <div class="systemNotice">Dieser Eintrag kommt direkt aus Google Calendar. „Termin löschen“ löscht den Termin auch dort. Kalender ausblenden ändert dagegen nur die Anzeige in SMART OfficeHub.</div>
     <section class="attachmentBox">
       <div class="summaryHead">
         <span>Teilnehmer</span>
@@ -1723,6 +1896,8 @@ function renderCalendarDetail(event) {
       <pre>${escapeHtml(description)}</pre>
     </details>
   `;
+
+  detailEl.querySelector("#deleteCalendarEventButton")?.addEventListener("click", () => deleteCalendarEvent(event));
 }
 
 function renderDocumentDetail(item) {
