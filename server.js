@@ -475,6 +475,7 @@ function toEmail(message, draftInfoByThread = new Map()) {
   const bodyText = messageBodyText(message);
   const attachments = collectAttachments(message.payload);
   const draftInfo = draftInfoByThread.get(message.threadId);
+  const gmailAccount = config.loginHint || "0";
   return {
     id: message.id,
     threadId: message.threadId,
@@ -491,7 +492,7 @@ function toEmail(message, draftInfoByThread = new Map()) {
     hasGmailDraft: Boolean(draftInfo),
     gmailDraftId: draftInfo?.draftId || null,
     isSmartBooking: isSmartBookingMessage(message),
-    gmailUrl: `https://mail.google.com/mail/#all/${message.id}`,
+    gmailUrl: `https://mail.google.com/mail/u/${encodeURIComponent(gmailAccount)}/#all/${message.id}`,
     ...classification
   };
 }
