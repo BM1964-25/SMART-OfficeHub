@@ -1705,7 +1705,7 @@ function renderCalendarDetail(event) {
       <div class="fact"><span>Teilnehmer</span>${escapeHtml(readableAttendeeCount(event))}</div>
     </div>
     <div class="actions">
-      ${event.htmlLink ? `<a class="button primary" href="${event.htmlLink}" target="_blank" rel="noreferrer">In Google Calendar öffnen</a>` : ""}
+      ${event.htmlLink ? `<a class="button primary" href="${event.htmlLink}" target="_blank" rel="noreferrer">In Google Kalender öffnen</a>` : ""}
     </div>
     <div class="systemNotice">Dieser Eintrag kommt direkt aus Google Calendar. SMART OfficeHub liest alle sichtbaren Google-Kalender, darunter auch eingebundene Kalender wie „privat“, sofern Google sie über die Calendar API bereitstellt.</div>
     <section class="attachmentBox">
