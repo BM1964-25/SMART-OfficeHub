@@ -152,7 +152,7 @@
           <div class="helpContent" id="helpContent">
             <article class="helpSection" id="help-overview">
               <h3>Überblick</h3>
-              <p>SMART OfficeHub bündelt E-Mails, Kalendertermine und Dokumentanhänge in einem lokalen Arbeitscockpit. Die App hilft beim Sichten von Nachrichten, Erstellen oder Aktualisieren von Antwortentwürfen, Prüfen kommender Termine und Ordnen von Dokumentanhängen.</p>
+              <p>SMART OfficeHub bündelt E-Mails, Kalendertermine und Dokumentanhänge in einem Arbeitscockpit. Die App hilft beim Sichten von Nachrichten, Erstellen oder Aktualisieren von Antwortentwürfen, Prüfen kommender Termine und Ordnen von Dokumentanhängen.</p>
               <p>Die Basisfunktionen benötigen keine externe KI. Die aktuelle KI-Übersicht arbeitet lokal mit den geladenen Mail-, Termin- und Dokumentdaten und hilft beim Priorisieren, Zusammenfassen und Formulieren.</p>
             </article>
 
@@ -275,7 +275,7 @@
 
             <article class="helpSection" id="help-data">
               <h3>Eingaben & Daten</h3>
-              <p>SMART OfficeHub liest E-Mails, Antwortentwürfe, Anhangmetadaten und Kalendereinträge aus den verbundenen Konten. OAuth-Tokens liegen lokal im Projektordner. Dokumentstatus und Entwurfszuordnung werden aktuell in der Browsersitzung gespeichert. Arbeitsstatus, Wiedervorlagen und ausgeblendete Kalender werden lokal im Browser gespeichert und in der Datensicherung berücksichtigt.</p>
+              <p>SMART OfficeHub liest E-Mails, Antwortentwürfe, Anhangmetadaten und Kalendereinträge aus den verbundenen Konten. OAuth-Tokens werden serverseitig für die aktuell genutzte Installation gespeichert: lokal im Projektordner bei lokaler Nutzung oder im bereitgestellten Serverkontext bei Vercel. Dokumentstatus und Entwurfszuordnung werden in der Browsersitzung gespeichert. Arbeitsstatus, Wiedervorlagen und ausgeblendete Kalender werden lokal im Browser gespeichert. Diese Daten werden in der Datensicherung berücksichtigt.</p>
             </article>
 
             <article class="helpSection" id="help-results">
@@ -286,7 +286,7 @@
             <article class="helpSection" id="help-errors">
               <h3>Fehler & Lösungen</h3>
               <ul>
-                <li>Google Login funktioniert nicht: App über http://localhost:8791 öffnen, nicht als Datei.</li>
+                <li>Google Login funktioniert nicht: App über https://officehub.builtsmart-ai.app oder lokal über http://localhost:8791 öffnen, nicht als Datei.</li>
                 <li>Keine Kalendertermine: Prüfen, ob der Kalender in Google sichtbar ist und die Calendar API aktiv ist.</li>
                 <li>Keine Dokumente: Nur echte Anhänge aus geladenen Nachrichten erscheinen im Dokumentbereich.</li>
                 <li>Dokumentanalyse leer: Der Dateityp benötigt eventuell einen Spezialparser.</li>
@@ -295,7 +295,7 @@
 
             <article class="helpSection" id="help-version">
               <h3>Version & Hinweise</h3>
-              <p>Lokale SMART OfficeHub-Version für E-Mail, Kalender und Dokumentanhänge. Die App verlässt beim Öffnen der Hilfe nicht die aktuelle Ansicht; Eingaben im Arbeitsbereich bleiben erhalten.</p>
+              <p>SMART OfficeHub-Version für E-Mail, Kalender und Dokumentanhänge. Die App verlässt beim Öffnen der Hilfe nicht die aktuelle Ansicht; Eingaben im Arbeitsbereich bleiben erhalten.</p>
             </article>
           </div>
         </div>
