@@ -1127,6 +1127,7 @@ body[data-workspace="ki"] .workspaceGuide {
 
 .calendarOverviewHead {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
@@ -1145,6 +1146,52 @@ body[data-workspace="ki"] .workspaceGuide {
   color: var(--muted);
   font-size: 12px;
   font-weight: 700;
+}
+
+.calendarWeekControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.weekNavButton,
+.weekTodayButton {
+  min-height: 34px;
+  border: 1px solid #dbe4f0;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 850;
+}
+
+.weekNavButton {
+  width: 36px;
+  padding: 0;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.weekTodayButton {
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+.weekNavButton:hover,
+.weekTodayButton:hover {
+  border-color: #9db5d2;
+  background: #f2f8ff;
+}
+
+.weekTodayButton:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.weekTodayButton:disabled:hover {
+  border-color: #dbe4f0;
+  background: #fff;
 }
 
 .weekGrid {

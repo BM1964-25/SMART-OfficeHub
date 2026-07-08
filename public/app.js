@@ -42,17 +42,17 @@ const workspaceGuides = {
   mails: {
     label: "Mail-Arbeitsbereich",
     text: "Hier werden E-Mails übersichtlich sortiert: Welche Nachricht braucht eine Antwort, welche muss geprüft werden, welche enthält Termine oder reine Informationen?",
-    action: "Nächster Schritt: Mail öffnen, Zusammenfassung prüfen, Originalmail kontrollieren und Entwurf erstellen oder aktualisieren."
+    action: "Listen zeigen nur das Wichtigste. Alle Angaben stehen im Detailbereich: Zusammenfassung, Originalmail, Entwurf und Aktionen."
   },
   termine: {
     label: "Termin-Arbeitsbereich",
     text: "Hier stehen echte Kalendereinträge aus verbundenen Kalendern sowie terminrelevante Arbeitsinformationen im Fokus.",
-    action: "Nächster Schritt: Termin prüfen, Vorbereitungsbedarf erkennen und fehlende Informationen oder Zeitfenster klären."
+    action: "Listen und Wochenansicht zeigen nur terminrelevante Angaben. Details, Teilnehmer, Beschreibung und Aktionen stehen rechts."
   },
   dokumente: {
     label: "Dokumenten-Arbeitsbereich",
     text: "Hier werden Anhänge und Unterlagen als eigene Arbeitsliste sichtbar, damit Rechnungen, Angebote, Verträge und Prüfunterlagen nicht in Mails untergehen.",
-    action: "Nächster Schritt: Dokumenttyp, Fristen, Beträge, Risiken und Rückfragen prüfen."
+    action: "Listen zeigen Datei, Typ und Status. Alle Angaben zur Quellmail, Analyse und Bewertung stehen im Detailbereich."
   },
   ki: {
     label: "KI Übersicht",
@@ -67,6 +67,7 @@ let calendars = [];
 let activeWorkspace = "mails";
 let activeBucket = "alle";
 let activeId = null;
+let calendarWeekOffset = 0;
 let inboxStats = {
   smartBookingCount14d: 0,
   windowStart: null,
@@ -678,7 +679,7 @@ async function loadEmails() {
   showNotice("OfficeHub-Daten werden geladen …");
   const [result, calendarResult] = await Promise.all([
     api("/api/emails"),
-    api("/api/calendar/events")
+    api("/api/calendar/events?days=90&maxResults=120")
   ]);
   emails = result.emails;
   calendars = calendarResult.calendars || [];
@@ -1067,8 +1068,14 @@ function startOfWeek(date = new Date()) {
   return value;
 }
 
-function calendarWeekDays() {
+function selectedCalendarWeekStart() {
   const start = startOfWeek(new Date());
+  start.setDate(start.getDate() + calendarWeekOffset * 7);
+  return start;
+}
+
+function calendarWeekDays() {
+  const start = selectedCalendarWeekStart();
   return Array.from({ length: 7 }, (_, index) => {
     const day = new Date(start);
     day.setDate(start.getDate() + index);
@@ -1086,6 +1093,15 @@ function formatWeekday(date) {
     day: "2-digit",
     month: "2-digit"
   }).format(date);
+}
+
+function formatWeekRange(days) {
+  const first = days[0];
+  const last = days[days.length - 1];
+  const year = new Intl.DateTimeFormat("de-DE", { year: "numeric" }).format(last);
+  const start = new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit" }).format(first);
+  const end = new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit" }).format(last);
+  return `${start} - ${end}.${year}`;
 }
 
 function formatEventTime(event) {
@@ -1157,7 +1173,12 @@ function renderCalendarWorkspaceHeader(list) {
       <div class="calendarOverviewHead">
         <div>
           <strong>Wochenübersicht</strong>
-          <span>${list.length} kommende Termine · ${visibleCalendarCount()} Kalender sichtbar${hiddenCount ? ` · ${hiddenCount} ausgeblendet` : ""}</span>
+          <span>${escapeHtml(formatWeekRange(weekDays))} · ${weekEvents.length} Termin${weekEvents.length === 1 ? "" : "e"} in dieser Woche · ${visibleCalendarCount()} Kalender sichtbar${hiddenCount ? ` · ${hiddenCount} ausgeblendet` : ""}</span>
+        </div>
+        <div class="calendarWeekControls" aria-label="Woche wechseln">
+          <button type="button" class="weekNavButton" data-week-action="previous" aria-label="Vorherige Woche">‹</button>
+          <button type="button" class="weekTodayButton" data-week-action="today" ${calendarWeekOffset === 0 ? "disabled" : ""}>Heute</button>
+          <button type="button" class="weekNavButton" data-week-action="next" aria-label="Nächste Woche">›</button>
         </div>
       </div>
       <div class="weekGrid">${weekGrid}</div>
@@ -1236,6 +1257,15 @@ function renderList() {
 
 function attachCalendarListControls() {
   if (activeWorkspace !== "termine") return;
+  listEl.querySelectorAll("[data-week-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const action = button.dataset.weekAction;
+      if (action === "previous") calendarWeekOffset -= 1;
+      if (action === "next") calendarWeekOffset += 1;
+      if (action === "today") calendarWeekOffset = 0;
+      render();
+    });
+  });
   listEl.querySelectorAll(".calendarToggle input").forEach((input) => {
     input.addEventListener("change", () => {
       if (input.checked) hiddenCalendarIds.delete(input.dataset.calendarId);
