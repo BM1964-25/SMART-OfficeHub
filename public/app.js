@@ -1222,6 +1222,7 @@ function renderList() {
         isAppointmentEmail(email) ? '<span class="badge appointmentBadge">Termin</span>' : "",
         isDocumentEmail(email) ? '<span class="badge documentBadge">Dokument</span>' : ""
       ].join("");
+      const mailStatus = readableMailStatus(email.labels);
       const draftStatus = hasCreatedDraft(email)
         ? '<span class="draftStatusLine"><span class="draftDot" aria-hidden="true"></span>Entwurf vorhanden</span>'
         : "";
@@ -1232,6 +1233,7 @@ function renderList() {
             <span class="date">${formatDate(email.date, email.timestamp)}</span>
           </span>
           <span class="subject">${escapeHtml(email.subject)}</span>
+          <span class="listMetaLine">Status: ${escapeHtml(mailStatus)}</span>
           ${draftStatus}
           <span class="snippet">${escapeHtml(email.snippet)}</span>
           <span class="badges">
@@ -1315,21 +1317,19 @@ function renderAiListItem(item) {
 }
 
 function renderDocumentListItem(item) {
-  const { email, attachment, key } = item;
+  const { attachment, key } = item;
   const current = key === activeId ? "true" : "false";
   return `
     <button class="mailItem documentItem" type="button" data-id="${key}" aria-current="${current}">
       <span class="mailHead">
-        <span class="sender">${escapeHtml(email.from)}</span>
-        <span class="date">${formatDate(email.date, email.timestamp)}</span>
+        <span class="sender">${escapeHtml(item.documentType)}</span>
+        <span class="date">${documentStatusLabel(item.status)}</span>
       </span>
       <span class="subject">${escapeHtml(attachment.filename || "Unbenannte Datei")}</span>
-      <span class="snippet">Aus Mail: ${escapeHtml(email.subject)} · ${escapeHtml(attachment.mimeType || "Dateityp unbekannt")} · ${formatBytes(attachment.size)}</span>
+      <span class="snippet">Datei · ${formatBytes(attachment.size)}</span>
       <span class="badges">
-        <span class="badge documentBadge">Dokument</span>
         <span class="badge typeBadge">${escapeHtml(item.documentType)}</span>
         <span class="badge statusBadge ${escapeHtml(item.status)}">${documentStatusLabel(item.status)}</span>
-        <span class="badge bucket">${escapeHtml(attachment.mimeType || "Datei")}</span>
       </span>
     </button>
   `;
@@ -1456,6 +1456,31 @@ function formatEventRange(event) {
   return `${dateText}, ${startTime}${endTime ? ` - ${endTime}` : ""}`;
 }
 
+function formatEventListDate(event) {
+  const start = event.start ? new Date(event.start) : null;
+  if (!start || Number.isNaN(start.getTime())) return "Datum offen";
+  return new Intl.DateTimeFormat("de-DE", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit"
+  }).format(start);
+}
+
+function formatEventListTime(event) {
+  if (event.isAllDay) return "Ganztägig";
+  const start = event.start ? new Date(event.start) : null;
+  const end = event.end ? new Date(event.end) : null;
+  if (!start || Number.isNaN(start.getTime())) return "Zeit offen";
+  const startTime = new Intl.DateTimeFormat("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(start);
+  const endTime = end && !Number.isNaN(end.getTime())
+    ? new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit" }).format(end)
+    : "";
+  return `${startTime}${endTime ? ` - ${endTime}` : ""}`;
+}
+
 function readableEventStatus(status = "") {
   const labels = {
     confirmed: "Bestätigt",
@@ -1479,18 +1504,17 @@ function readableAttendeeCount(event) {
 
 function renderCalendarListItem(event, key) {
   const current = key === activeId ? "true" : "false";
-  const snippet = event.location || event.description || event.organizer || "Kalendereintrag aus Google Calendar";
   return `
     <button class="mailItem calendarItem" type="button" data-id="${key}" aria-current="${current}">
       <span class="mailHead">
-        <span class="sender">${escapeHtml(event.calendarName || "Google Calendar")}</span>
-        <span class="date">${escapeHtml(formatEventRange(event))}</span>
+        <span class="sender">${escapeHtml(formatEventListDate(event))}</span>
+        <span class="date">${escapeHtml(formatEventListTime(event))}</span>
       </span>
       <span class="subject">${escapeHtml(event.title)}</span>
-      <span class="snippet">${escapeHtml(compactText(snippet).slice(0, 180))}</span>
+      <span class="snippet">Kalender: ${escapeHtml(event.calendarName || "Google Kalender")}</span>
       <span class="badges">
-        <span class="badge appointmentBadge">Kalender-Termin</span>
         <span class="badge bucket">${escapeHtml(event.calendarName || "Kalender")}</span>
+        <span class="badge appointmentBadge">${escapeHtml(readableEventStatus(event.status))}</span>
         ${event.isAllDay ? '<span class="badge bucket">Ganztägig</span>' : ""}
       </span>
     </button>

@@ -1345,6 +1345,12 @@ body[data-workspace="ki"] .workspaceGuide {
   font-weight: 750;
 }
 
+.listMetaLine {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
 .draftStatusLine {
   display: inline-flex;
   align-items: center;
