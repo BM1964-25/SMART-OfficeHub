@@ -82,6 +82,21 @@ const taskFilterLabels = {
   erledigt: "Erledigt"
 };
 const taskFilterOrder = ["alle", "offen", "in-bearbeitung", "warten", "wiedervorlage", "faellig", "erledigt"];
+const taskGroupOrder = ["faellig", "warten", "heute", "offen", "erledigt"];
+const taskGroupLabels = {
+  faellig: "Fällig",
+  warten: "Warten",
+  heute: "Heute",
+  offen: "Offen",
+  erledigt: "Erledigt"
+};
+const taskGroupDescriptions = {
+  faellig: "Wiedervorlagen und Aufgaben, die jetzt dran sind.",
+  warten: "Aufgaben, bei denen eine Rückmeldung erwartet wird.",
+  heute: "Termine und Aufgaben mit Bezug zum heutigen Tag.",
+  offen: "Offene Aufgaben ohne direkte Fälligkeit.",
+  erledigt: "Abgeschlossene Aufgaben im gewählten Filter."
+};
 let emails = [];
 let calendarEvents = [];
 let calendars = [];
@@ -953,6 +968,7 @@ function taskItems() {
       meta: email.from || "Absender unbekannt",
       status: sourceStatusFor(key),
       followUp: followUpFor(key),
+      dueToday: false,
       defaultActionable: email.bucket === "antwort" || email.bucket === "prüfen" || assessment.replyNeeded || isDocumentEmail(email),
       action: assessment.nextAction || email.nextAction || "E-Mail prüfen.",
       score: assessment.score + (email.bucket === "antwort" ? 3 : 0)
@@ -974,6 +990,7 @@ function taskItems() {
       meta: `${formatEventListDate(event)} · ${formatEventListTime(event)}`,
       status: sourceStatusFor(key),
       followUp: followUpFor(key),
+      dueToday: Boolean(today),
       defaultActionable: today || assessment.priority !== "niedrig",
       action: assessment.nextAction || "Termin prüfen.",
       score: assessment.score + (today ? 4 : 0)
@@ -992,6 +1009,7 @@ function taskItems() {
       meta: `${item.documentType} · ${documentStatusLabel(item.status)}`,
       status: sourceStatusFor(item.key),
       followUp: followUpFor(item.key),
+      dueToday: false,
       defaultActionable: item.status === "neu" || item.status === "prüfen" || ["Rechnung", "Angebot", "Vertrag"].includes(item.documentType),
       action: assessment.nextAction || item.assessment.nextAction || "Dokument prüfen.",
       score: assessment.score + (item.status === "prüfen" ? 3 : 0)
@@ -1012,6 +1030,37 @@ function filteredTaskItems(filter = activeTaskFilter) {
     if (filter === "faellig") return isFollowUpDue(task.sourceKey);
     return task.status === filter;
   });
+}
+
+function taskGroupFor(item) {
+  if (item.status === "erledigt") return "erledigt";
+  if (isFollowUpDue(item.sourceKey)) return "faellig";
+  if (item.status === "warten") return "warten";
+  if (item.dueToday) return "heute";
+  return "offen";
+}
+
+function renderTaskGroups(items) {
+  return taskGroupOrder
+    .map((group) => {
+      const groupItems = items.filter((item) => taskGroupFor(item) === group);
+      if (!groupItems.length) return "";
+      return `
+        <section class="taskGroup" aria-label="${escapeHtml(taskGroupLabels[group])}">
+          <div class="taskGroupHead">
+            <div>
+              <span>${escapeHtml(taskGroupLabels[group])}</span>
+              <small>${escapeHtml(taskGroupDescriptions[group])}</small>
+            </div>
+            <strong>${groupItems.length}</strong>
+          </div>
+          <div class="taskGroupItems">
+            ${groupItems.map((item) => renderTaskListItem(item)).join("")}
+          </div>
+        </section>
+      `;
+    })
+    .join("");
 }
 
 function workspaceCount(workspace) {
@@ -1710,12 +1759,12 @@ function renderList() {
 
   if (!list.some((item) => item.key === activeId)) activeId = list[0].key;
 
-  const renderedItems = list
-    .map((item) => {
+  const renderedItems = activeWorkspace === "aufgaben"
+    ? renderTaskGroups(list)
+    : list.map((item) => {
       if (item.kind === "event") return renderCalendarListItem(item.event, item.key);
       if (item.kind === "document") return renderDocumentListItem(item);
       if (item.kind === "ai") return renderAiListItem(item);
-      if (item.kind === "task") return renderTaskListItem(item);
       const email = item.email;
       const current = item.key === activeId ? "true" : "false";
       const draftClass = hasCreatedDraft(email) ? "draftCreated" : "";
@@ -1746,8 +1795,7 @@ function renderList() {
           </span>
         </button>
       `;
-    })
-    .join("");
+    }).join("");
   listEl.innerHTML = `${activeWorkspace === "termine" ? renderCalendarWorkspaceHeader(list) : ""}${renderedItems}`;
 
   attachCalendarListControls();

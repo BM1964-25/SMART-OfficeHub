@@ -1254,6 +1254,52 @@ body[data-workspace="ki"] .workspaceGuide {
   background: #fff0ec;
 }
 
+.taskGroup {
+  display: grid;
+  gap: 10px;
+  padding: 12px 12px 14px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfdfd;
+}
+
+.taskGroupHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ink);
+}
+
+.taskGroupHead span,
+.taskGroupHead strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.taskGroupHead small {
+  display: block;
+  max-width: 420px;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.taskGroupHead strong {
+  min-width: 30px;
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: #e8f5f4;
+  color: #174c42;
+  text-align: center;
+}
+
+.taskGroupItems {
+  display: grid;
+  gap: 10px;
+}
+
 .taskOpenButton {
   display: grid;
   gap: 8px;
