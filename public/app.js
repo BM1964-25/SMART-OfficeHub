@@ -1642,7 +1642,7 @@ async function createDraft(email) {
   });
   markDraftCreated(email, result.result?.id || existingDraftId);
   email.hasGmailDraft = true;
-  showNotice(existingDraftId ? "Antwortentwurf wurde in Gmail aktualisiert." : "Antwortentwurf wurde in Gmail erstellt.");
+  showNotice(existingDraftId ? "Antwortentwurf wurde in Gmail aktualisiert." : "Antwortentwurf wurde als Gmail-Entwurf übertragen.");
   render();
 }
 
@@ -1814,7 +1814,7 @@ function renderEmailDetail(email) {
         <span class="draftToneHint">${anthropicApiKey ? "KI-Entwurf wird automatisch erstellt; Tonalität wird angewendet." : "Ohne KI-Schlüssel wird der Startentwurf als Fallback angezeigt."}</span>
       </div>
       <div class="actions">
-        <button class="button secondary" type="button" id="draftButton">${existingDraftId ? "Entwurf in Gmail aktualisieren" : "Entwurf in Gmail erstellen"}</button>
+        <button class="button secondary" type="button" id="draftButton">${existingDraftId ? "Entwurf in Gmail aktualisieren" : "Als Entwurf in Gmail übertragen"}</button>
       </div>
     </div>`;
 
