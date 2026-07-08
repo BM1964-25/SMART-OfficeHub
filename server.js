@@ -2,6 +2,7 @@ import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -10,6 +11,8 @@ const localDir = isVercel ? path.join("/tmp", "smart-officehub") : path.join(__d
 const tokenPath = path.join(localDir, "tokens.json");
 const configPath = path.join(__dirname, "config.local.json");
 const publicDir = path.join(__dirname, "public");
+const requestStore = new AsyncLocalStorage();
+const tokenCookieName = "smart_officehub_google";
 
 const SCOPES = [
   "https://www.googleapis.com/auth/gmail.modify",
@@ -131,7 +134,74 @@ async function readBody(req) {
   return raw ? JSON.parse(raw) : {};
 }
 
+function parseCookies(req) {
+  const header = req.headers.cookie || "";
+  return Object.fromEntries(
+    header
+      .split(";")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const index = part.indexOf("=");
+        if (index === -1) return [part, ""];
+        return [part.slice(0, index), decodeURIComponent(part.slice(index + 1))];
+      })
+  );
+}
+
+function tokenCookieKey() {
+  return crypto
+    .createHash("sha256")
+    .update(config.clientSecret || "smart-officehub-local-cookie-key")
+    .digest();
+}
+
+function encryptTokenCookie(tokens) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", tokenCookieKey(), iv);
+  const payload = JSON.stringify({
+    access_token: tokens.access_token || "",
+    refresh_token: tokens.refresh_token || "",
+    scope: tokens.scope || "",
+    token_type: tokens.token_type || "",
+    expires_at: tokens.expires_at || 0
+  });
+  const encrypted = Buffer.concat([cipher.update(payload, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([iv, tag, encrypted]).toString("base64url");
+}
+
+function decryptTokenCookie(value = "") {
+  try {
+    const buffer = Buffer.from(value, "base64url");
+    const iv = buffer.subarray(0, 12);
+    const tag = buffer.subarray(12, 28);
+    const encrypted = buffer.subarray(28);
+    const decipher = crypto.createDecipheriv("aes-256-gcm", tokenCookieKey(), iv);
+    decipher.setAuthTag(tag);
+    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+    return { ...JSON.parse(decrypted), source: "cookie" };
+  } catch {
+    return null;
+  }
+}
+
+function setTokenCookie(res, tokens) {
+  const value = encryptTokenCookie(tokens);
+  const secure = isVercel ? "; Secure" : "";
+  res.setHeader(
+    "Set-Cookie",
+    `${tokenCookieName}=${encodeURIComponent(value)}; HttpOnly; Path=/; Max-Age=2592000; SameSite=Lax${secure}`
+  );
+}
+
 async function readTokens() {
+  const req = requestStore.getStore()?.req;
+  if (req) {
+    const tokens = decryptTokenCookie(parseCookies(req)[tokenCookieName]);
+    if (tokens?.refresh_token || tokens?.access_token) return tokens;
+  }
+
   try {
     return JSON.parse(await fs.readFile(tokenPath, "utf8"));
   } catch {
@@ -148,6 +218,8 @@ async function readTokens() {
 }
 
 async function writeTokens(tokens) {
+  const res = requestStore.getStore()?.res;
+  if (res) setTokenCookie(res, tokens);
   await fs.mkdir(localDir, { recursive: true });
   await fs.writeFile(tokenPath, JSON.stringify(tokens, null, 2));
 }
@@ -892,7 +964,7 @@ async function serveStatic(req, res, reqUrl) {
   }
 }
 
-async function router(req, res) {
+async function handleRequest(req, res) {
   const reqUrl = new URL(req.url, `http://localhost:${port}`);
 
   try {
@@ -986,6 +1058,10 @@ async function router(req, res) {
   } catch (error) {
     sendJson(res, error.status || 500, { error: error.message || "Unbekannter Fehler" });
   }
+}
+
+async function router(req, res) {
+  return requestStore.run({ req, res }, () => handleRequest(req, res));
 }
 
 const server = http.createServer(router);
