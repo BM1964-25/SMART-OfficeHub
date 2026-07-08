@@ -97,6 +97,11 @@ const taskGroupDescriptions = {
   offen: "Offene Aufgaben ohne direkte Fälligkeit.",
   erledigt: "Abgeschlossene Aufgaben im gewählten Filter."
 };
+const taskPriorityRank = {
+  hoch: 3,
+  mittel: 2,
+  niedrig: 1
+};
 let emails = [];
 let calendarEvents = [];
 let calendars = [];
@@ -954,10 +959,18 @@ function isActionableTask(task) {
   return task.status !== "offen" || task.followUp || task.defaultActionable === true;
 }
 
+function compareTasksByPriority(a, b) {
+  const priorityDifference = (taskPriorityRank[b.priority] || 0) - (taskPriorityRank[a.priority] || 0);
+  if (priorityDifference) return priorityDifference;
+  if (b.score !== a.score) return b.score - a.score;
+  return a.title.localeCompare(b.title, "de");
+}
+
 function taskItems() {
   const mailTasks = emails.map((email) => {
     const key = `mail:${email.id}`;
     const assessment = aiEmailAssessment(email);
+    const score = assessment.score + (email.bucket === "antwort" ? 3 : 0);
     return {
       kind: "task",
       key: `task:${key}`,
@@ -971,7 +984,8 @@ function taskItems() {
       dueToday: false,
       defaultActionable: email.bucket === "antwort" || email.bucket === "prüfen" || assessment.replyNeeded || isDocumentEmail(email),
       action: assessment.nextAction || email.nextAction || "E-Mail prüfen.",
-      score: assessment.score + (email.bucket === "antwort" ? 3 : 0)
+      score,
+      priority: priorityFromScore(score)
     };
   });
 
@@ -980,6 +994,7 @@ function taskItems() {
     const assessment = aiEventAssessment(event);
     const date = event.start ? new Date(event.start) : null;
     const today = date && !Number.isNaN(date.getTime()) && isSameDay(date, new Date());
+    const score = assessment.score + (today ? 4 : 0);
     return {
       kind: "task",
       key: `task:${key}`,
@@ -993,12 +1008,14 @@ function taskItems() {
       dueToday: Boolean(today),
       defaultActionable: today || assessment.priority !== "niedrig",
       action: assessment.nextAction || "Termin prüfen.",
-      score: assessment.score + (today ? 4 : 0)
+      score,
+      priority: priorityFromScore(score)
     };
   });
 
   const documentTasks = documentItems().map((item) => {
     const assessment = aiDocumentAssessment(item);
+    const score = assessment.score + (item.status === "prüfen" ? 3 : 0);
     return {
       kind: "task",
       key: `task:${item.key}`,
@@ -1012,7 +1029,8 @@ function taskItems() {
       dueToday: false,
       defaultActionable: item.status === "neu" || item.status === "prüfen" || ["Rechnung", "Angebot", "Vertrag"].includes(item.documentType),
       action: assessment.nextAction || item.assessment.nextAction || "Dokument prüfen.",
-      score: assessment.score + (item.status === "prüfen" ? 3 : 0)
+      score,
+      priority: priorityFromScore(score)
     };
   });
 
@@ -1020,7 +1038,7 @@ function taskItems() {
     .filter(isActionableTask)
     .sort((a, b) => {
       if (isFollowUpDue(a.sourceKey) !== isFollowUpDue(b.sourceKey)) return isFollowUpDue(a.sourceKey) ? -1 : 1;
-      return b.score - a.score;
+      return compareTasksByPriority(a, b);
     });
 }
 
@@ -1043,7 +1061,7 @@ function taskGroupFor(item) {
 function renderTaskGroups(items) {
   return taskGroupOrder
     .map((group) => {
-      const groupItems = items.filter((item) => taskGroupFor(item) === group);
+      const groupItems = items.filter((item) => taskGroupFor(item) === group).sort(compareTasksByPriority);
       if (!groupItems.length) return "";
       return `
         <section class="taskGroup" aria-label="${escapeHtml(taskGroupLabels[group])}">
@@ -1844,6 +1862,7 @@ function renderTaskListItem(item) {
         <span class="snippet">${escapeHtml(item.action)}</span>
         <span class="badges">
           <span class="badge aiBadge">${escapeHtml(workStatusLabel(item.status))}</span>
+          <span class="badge ${escapeHtml(item.priority)}">Priorität ${escapeHtml(item.priority)}</span>
           ${item.followUp ? `<span class="badge bucket">Wiedervorlage ${escapeHtml(formatFollowUpDate(item.followUp))}</span>` : ""}
           <span class="badge ${due ? "hoch" : "mittel"}">${due ? "fällig" : "Aufgabe"}</span>
         </span>
