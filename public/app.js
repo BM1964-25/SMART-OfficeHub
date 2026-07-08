@@ -652,6 +652,41 @@ function setFollowUp(key, value) {
   render();
 }
 
+function tomorrowDateValue() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function applyTaskQuickAction(key, action) {
+  if (action === "done") {
+    workStatusByKey[key] = "erledigt";
+    delete followUpByKey[key];
+    showNotice("Aufgabe wurde als erledigt markiert.");
+  }
+  if (action === "waiting") {
+    workStatusByKey[key] = "warten";
+    showNotice("Aufgabe wurde auf „Warten“ gesetzt.");
+  }
+  if (action === "tomorrow") {
+    workStatusByKey[key] = "wiedervorlage";
+    followUpByKey[key] = tomorrowDateValue();
+    showNotice("Aufgabe wurde auf morgen wiedervorgelegt.");
+  }
+  saveStoredObject(workStatusStorageKey, workStatusByKey);
+  saveStoredObject(followUpStorageKey, followUpByKey);
+  render();
+}
+
+function attachTaskQuickActions(scope = document) {
+  scope.querySelectorAll("[data-task-action]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      applyTaskQuickAction(button.dataset.taskKey, button.dataset.taskAction);
+    });
+  });
+}
+
 function renderWorkControl(key, label = "Arbeitsstatus") {
   const status = workStatusFor(key);
   const followUp = followUpFor(key);
@@ -1722,6 +1757,7 @@ function renderList() {
       render();
     });
   });
+  attachTaskQuickActions(listEl);
 }
 
 function attachCalendarListControls() {
@@ -1750,19 +1786,26 @@ function renderTaskListItem(item) {
   const current = item.key === activeId ? "true" : "false";
   const due = isFollowUpDue(item.sourceKey);
   return `
-    <button class="mailItem taskItem ${due ? "taskDue" : ""}" type="button" data-id="${item.key}" aria-current="${current}">
-      <span class="mailHead">
-        <span class="sender">${escapeHtml(item.sourceType)}</span>
-        <span class="date">${escapeHtml(workStatusLabel(item.status))}</span>
-      </span>
-      <span class="subject">${escapeHtml(item.title)}</span>
-      <span class="snippet">${escapeHtml(item.action)}</span>
-      <span class="badges">
-        <span class="badge aiBadge">${escapeHtml(workStatusLabel(item.status))}</span>
-        ${item.followUp ? `<span class="badge bucket">Wiedervorlage ${escapeHtml(formatFollowUpDate(item.followUp))}</span>` : ""}
-        <span class="badge ${due ? "hoch" : "mittel"}">${due ? "fällig" : "Aufgabe"}</span>
-      </span>
-    </button>
+    <article class="mailItem taskItem ${due ? "taskDue" : ""}" aria-current="${current}">
+      <button class="taskOpenButton" type="button" data-id="${item.key}" aria-current="${current}">
+        <span class="mailHead">
+          <span class="sender">${escapeHtml(item.sourceType)}</span>
+          <span class="date">${escapeHtml(workStatusLabel(item.status))}</span>
+        </span>
+        <span class="subject">${escapeHtml(item.title)}</span>
+        <span class="snippet">${escapeHtml(item.action)}</span>
+        <span class="badges">
+          <span class="badge aiBadge">${escapeHtml(workStatusLabel(item.status))}</span>
+          ${item.followUp ? `<span class="badge bucket">Wiedervorlage ${escapeHtml(formatFollowUpDate(item.followUp))}</span>` : ""}
+          <span class="badge ${due ? "hoch" : "mittel"}">${due ? "fällig" : "Aufgabe"}</span>
+        </span>
+      </button>
+      <div class="taskQuickActions" aria-label="Schnellaktionen">
+        <button type="button" data-task-action="done" data-task-key="${escapeHtml(item.sourceKey)}">Erledigt</button>
+        <button type="button" data-task-action="waiting" data-task-key="${escapeHtml(item.sourceKey)}">Warten</button>
+        <button type="button" data-task-action="tomorrow" data-task-key="${escapeHtml(item.sourceKey)}">Morgen</button>
+      </div>
+    </article>
   `;
 }
 
@@ -2356,6 +2399,9 @@ function renderTaskDetail(item) {
     ${renderWorkControl(item.sourceKey, "Arbeitsstatus")}
     <div class="actions">
       <button class="button primary" type="button" id="openTaskSource">Ursprung öffnen</button>
+      <button class="button secondary" type="button" data-task-action="done" data-task-key="${escapeHtml(item.sourceKey)}">Erledigt</button>
+      <button class="button secondary" type="button" data-task-action="waiting" data-task-key="${escapeHtml(item.sourceKey)}">Warten</button>
+      <button class="button secondary" type="button" data-task-action="tomorrow" data-task-key="${escapeHtml(item.sourceKey)}">Morgen wieder vorlegen</button>
     </div>
     <div class="systemNotice">Diese Aufgabe ist keine separate Kopie. Sie verweist auf die ursprüngliche Mail, den Termin oder das Dokument und nutzt denselben Arbeitsstatus.</div>
   `;
@@ -2368,6 +2414,7 @@ function renderTaskDetail(item) {
     render();
   });
   attachWorkControlHandlers();
+  attachTaskQuickActions(detailEl);
 }
 
 async function archiveEmail(email) {
