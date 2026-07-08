@@ -26,6 +26,34 @@ npm start
 http://localhost:8791
 ```
 
+## Vercel einrichten
+
+Auf Vercel gibt es keine `config.local.json`. Deshalb müssen die Google-OAuth-Daten in Vercel als Environment Variables gepflegt werden:
+
+```text
+GOOGLE_CLIENT_ID=DEINE_GOOGLE_CLIENT_ID.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=DEIN_GOOGLE_CLIENT_SECRET
+GOOGLE_REDIRECT_URI=https://DEINE-VERCEL-DOMAIN.vercel.app/oauth2callback
+GOOGLE_LOGIN_HINT=metzger@metzger-rea.de
+```
+
+`GOOGLE_REDIRECT_URI` ist empfohlen. Wenn sie fehlt, nutzt die App auf Vercel automatisch `https://${VERCEL_URL}/oauth2callback`.
+`GOOGLE_LOGIN_HINT` ist optional und schlägt Google beim Anmelden das gewünschte Konto vor.
+
+In der Google Cloud Console muss dieselbe Redirect-URI beim OAuth-Client unter **Autorisierte Weiterleitungs-URIs** eingetragen werden:
+
+```text
+https://DEINE-VERCEL-DOMAIN.vercel.app/oauth2callback
+```
+
+Für lokale Entwicklung bleibt zusätzlich erlaubt:
+
+```text
+http://localhost:8791/oauth2callback
+```
+
+Nach Änderungen an Vercel Environment Variables muss die App neu deployed werden.
+
 ## Was die App kann
 
 - Gmail OAuth Login

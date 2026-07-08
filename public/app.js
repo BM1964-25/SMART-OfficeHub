@@ -554,7 +554,7 @@ async function api(path, options = {}) {
 async function checkStatus() {
   const status = await api("/api/status");
   if (!status.configured) {
-    showNotice(`Google OAuth ist noch nicht eingerichtet. Lege config.local.json an. Redirect URI: ${status.redirectUri}`, "error");
+    showNotice(`Google OAuth ist noch nicht eingerichtet. Lokal config.local.json anlegen; auf Vercel GOOGLE_CLIENT_ID und GOOGLE_CLIENT_SECRET setzen. Redirect URI: ${status.redirectUri}`, "error");
     loginLink.classList.add("disabled");
     return false;
   }

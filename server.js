@@ -36,12 +36,14 @@ async function loadConfig() {
   const useSmartBooking = fileConfig.useSmartBooking === true || process.env.USE_SMART_BOOKING_GOOGLE === "true";
   const smartBooking = useSmartBooking ? await loadSmartBookingConfig(fileConfig.smartBookingProjectPath || process.env.SMART_BOOKING_PROJECT_PATH) : null;
   const smartGoogle = smartBooking?.settings || {};
+  const vercelRedirectUri = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.replace(/^https?:\/\//, "")}/oauth2callback` : "";
 
   return {
     ...fileConfig,
     clientId: fileConfig.clientId || process.env.GOOGLE_CLIENT_ID || smartGoogle.google_client_id || smartBooking?.env.GOOGLE_CLIENT_ID,
     clientSecret: fileConfig.clientSecret || process.env.GOOGLE_CLIENT_SECRET || smartGoogle.google_client_secret || smartBooking?.env.GOOGLE_CLIENT_SECRET,
-    redirectUri: fileConfig.redirectUri || process.env.GOOGLE_REDIRECT_URI || "http://localhost:8791/oauth2callback",
+    redirectUri: fileConfig.redirectUri || process.env.GOOGLE_REDIRECT_URI || vercelRedirectUri || "http://localhost:8791/oauth2callback",
+    loginHint: fileConfig.loginHint || process.env.GOOGLE_LOGIN_HINT || "",
     port: Number(fileConfig.port || process.env.PORT || 8791),
     smartBooking
   };
@@ -151,7 +153,7 @@ async function writeTokens(tokens) {
 
 function requireConfig() {
   if (!config.clientId || !config.clientSecret) {
-    const error = new Error("Google OAuth ist noch nicht konfiguriert. Bitte config.local.json anlegen.");
+    const error = new Error("Google OAuth ist noch nicht konfiguriert. Lokal bitte config.local.json anlegen; auf Vercel GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET und optional GOOGLE_REDIRECT_URI setzen.");
     error.status = 503;
     throw error;
   }
@@ -166,9 +168,10 @@ function authUrl() {
     response_type: "code",
     scope: SCOPES.join(" "),
     access_type: "offline",
-    prompt: "consent",
+    prompt: "consent select_account",
     state
   });
+  if (config.loginHint) params.set("login_hint", config.loginHint);
   return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
 }
 
