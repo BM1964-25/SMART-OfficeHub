@@ -547,6 +547,38 @@ function formatBytes(value = 0) {
   return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
 }
 
+function formatMailAddress(value = "") {
+  const match = String(value || "").match(/^"?([^"<@]+)"?\s*<([^>]+)>/);
+  if (!match) return value || "unbekannt";
+  const name = match[1].replace(/\s+/g, " ").trim();
+  const address = match[2].trim();
+  return name ? `${name} · ${address}` : address;
+}
+
+function readableMailStatus(labels = []) {
+  const labelSet = new Set(labels || []);
+  const statuses = [];
+  if (labelSet.has("UNREAD")) statuses.push("Ungelesen");
+  if (labelSet.has("IMPORTANT")) statuses.push("Wichtig");
+  if (labelSet.has("INBOX")) statuses.push("Posteingang");
+  if (labelSet.has("SENT")) statuses.push("Gesendet");
+  if (labelSet.has("DRAFT")) statuses.push("Entwurf");
+  if (labelSet.has("STARRED")) statuses.push("Markiert");
+  if (labelSet.has("TRASH")) statuses.push("Papierkorb");
+  if (labelSet.has("SPAM")) statuses.push("Spam");
+  return statuses.length ? statuses.join(" · ") : "Kein besonderer Status";
+}
+
+function readableMailCategory(labels = []) {
+  const labelSet = new Set(labels || []);
+  if (labelSet.has("CATEGORY_PERSONAL")) return "Persönlich";
+  if (labelSet.has("CATEGORY_UPDATES")) return "Updates";
+  if (labelSet.has("CATEGORY_PROMOTIONS")) return "Werbung";
+  if (labelSet.has("CATEGORY_SOCIAL")) return "Soziale Netzwerke";
+  if (labelSet.has("CATEGORY_FORUMS")) return "Foren";
+  return labels?.length ? "Sonstige" : "Keine Kategorie";
+}
+
 function escapeHtml(value = "") {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -1805,9 +1837,11 @@ function renderEmailDetail(email) {
     </section>
     ${renderAiEmailBox(email)}
     <div class="detailGrid">
-      <div class="fact"><span>Absender</span>${escapeHtml(email.from)}</div>
+      <div class="fact"><span>Absender</span>${escapeHtml(formatMailAddress(email.from))}</div>
+      <div class="fact"><span>Empfänger</span>${escapeHtml(formatMailAddress(email.to))}</div>
       <div class="fact"><span>Datum</span>${formatDate(email.date, email.timestamp)}</div>
-      <div class="fact"><span>Label</span>${escapeHtml(email.labels.join(", ") || "keine")}</div>
+      <div class="fact"><span>Status</span>${escapeHtml(readableMailStatus(email.labels))}</div>
+      <div class="fact"><span>Kategorie</span>${escapeHtml(readableMailCategory(email.labels))}</div>
       <div class="fact"><span>Nächster Schritt</span>${escapeHtml(email.nextAction)}</div>
     </div>
     <div class="actions">
