@@ -1336,6 +1336,31 @@ body[data-workspace="ki"] .workspaceGuide {
   background: #eef8f4;
 }
 
+.taskDetailActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.taskDetailActions .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  min-width: 92px;
+  white-space: nowrap;
+}
+
+.taskDetailActions .button:first-child {
+  min-width: 156px;
+}
+
+.taskDetailActions .button:last-child {
+  min-width: 216px;
+}
+
 .calendarOverview {
   padding: 14px;
   border-bottom: 1px solid var(--line);

@@ -2464,7 +2464,7 @@ function renderTaskDetail(item) {
       </ul>
     </section>
     ${renderWorkControl(item.sourceKey, "Arbeitsstatus")}
-    <div class="actions">
+    <div class="taskDetailActions">
       <button class="button primary" type="button" id="openTaskSource">Ursprung öffnen</button>
       <button class="button secondary" type="button" data-task-action="done" data-task-key="${escapeHtml(item.sourceKey)}">Erledigt</button>
       <button class="button secondary" type="button" data-task-action="waiting" data-task-key="${escapeHtml(item.sourceKey)}">Warten</button>
