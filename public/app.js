@@ -80,6 +80,7 @@ const draftCreatedIds = new Set(loadDraftCreatedIds());
 const draftIdsByEmail = loadDraftIds();
 const documentStatusByKey = loadDocumentStatus();
 const documentAnalysisByKey = {};
+const autoKiDraftsByEmail = new Map();
 let anthropicApiKey = loadAnthropicApiKey();
 let anthropicKeyVisible = false;
 let anthropicConnected = false;
@@ -324,6 +325,53 @@ async function generateKiReply(email, tone, currentText) {
   });
 
   return result.result;
+}
+
+function setDraftSourceLabel(source = "Startentwurf", state = "fallback") {
+  const label = detailEl.querySelector("#draftSourceLabel");
+  if (!label) return;
+  label.textContent = source;
+  label.className = `draftSourceLabel ${state}`;
+}
+
+async function runKiDraft(email, { automatic = false } = {}) {
+  const textarea = detailEl.querySelector("#draftText");
+  const button = detailEl.querySelector("#improveDraftButton");
+  if (!textarea || email.isSmartBooking) return;
+
+  const tone = detailEl.querySelector("#draftTone")?.value || "professionell";
+  const previousButtonLabel = button?.textContent || "Mit KI neu formulieren";
+  if (button) {
+    button.disabled = true;
+    button.textContent = automatic ? "KI erstellt ..." : "KI formuliert ...";
+  }
+  textarea.dataset.kiBusy = "true";
+  setDraftSourceLabel("KI-Entwurf wird erstellt ...", "loading");
+  if (!automatic) showNotice("Die KI erstellt einen individuellen Antwortentwurf ...");
+
+  try {
+    const result = await generateKiReply(email, tone, textarea.value);
+    textarea.value = result.reply;
+    fitDraftTextarea(textarea);
+    textarea.dataset.kiBusy = "";
+    autoKiDraftsByEmail.set(email.id, result.reply);
+    setDraftSourceLabel("KI-Entwurf", "success");
+    showNotice(`KI-Entwurf wurde erstellt${result.model ? ` (${result.model})` : ""}. Gmail wird erst beim Erstellen oder Aktualisieren geändert.`);
+  } catch (error) {
+    textarea.dataset.kiBusy = "";
+    setDraftSourceLabel("Startentwurf", "fallback");
+    showNotice(
+      automatic
+        ? "KI-Entwurf konnte nicht automatisch erstellt werden. Der Startentwurf bleibt als Fallback sichtbar."
+        : error.message || "Die KI konnte keinen Entwurf erstellen.",
+      "error"
+    );
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = previousButtonLabel;
+    }
+  }
 }
 
 function disconnectAnthropic() {
@@ -1702,7 +1750,10 @@ function renderEmailDetail(email) {
   const hasDraft = hasCreatedDraft(email);
   const existingDraftId = draftIdForEmail(email);
   const originalText = email.bodyText || email.snippet || "Kein Mailtext verfügbar.";
-  const draftText = defaultReply(email);
+  const cachedKiDraft = autoKiDraftsByEmail.get(email.id) || "";
+  const draftText = cachedKiDraft || defaultReply(email);
+  const draftSource = cachedKiDraft ? "KI-Entwurf" : "Startentwurf";
+  const draftSourceState = cachedKiDraft ? "success" : "fallback";
   const summaryLines = mailSummary(email)
     .map(([label, value]) => `<li><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</li>`)
     .join("");
@@ -1712,7 +1763,10 @@ function renderEmailDetail(email) {
   const draftSection = email.isSmartBooking
     ? ""
     : `<div class="draftBox">
-      <label for="draftText"><strong>Antwortentwurf</strong></label>
+      <div class="draftHeader">
+        <label for="draftText"><strong>Antwortentwurf</strong></label>
+        <span class="draftSourceLabel ${draftSourceState}" id="draftSourceLabel">${draftSource}</span>
+      </div>
       <textarea id="draftText">${escapeHtml(draftText)}</textarea>
       <div class="draftTools">
         <label>
@@ -1724,8 +1778,8 @@ function renderEmailDetail(email) {
             <option value="verbindlich">verbindlich</option>
           </select>
         </label>
-        <button class="button secondary" type="button" id="improveDraftButton">Mit KI verbessern</button>
-        <span class="draftToneHint">Tonalität wird beim KI-Lauf angewendet.</span>
+        <button class="button secondary" type="button" id="improveDraftButton">Mit KI neu formulieren</button>
+        <span class="draftToneHint">${anthropicApiKey ? "KI-Entwurf wird automatisch erstellt; Tonalität wird angewendet." : "Ohne KI-Schlüssel wird der Startentwurf als Fallback angezeigt."}</span>
       </div>
       <div class="actions">
         <button class="button secondary" type="button" id="draftButton">${existingDraftId ? "Entwurf in Gmail aktualisieren" : "Entwurf in Gmail erstellen"}</button>
@@ -1781,26 +1835,14 @@ function renderEmailDetail(email) {
   const draftTextarea = detailEl.querySelector("#draftText");
   fitDraftTextarea(draftTextarea);
   draftTextarea?.addEventListener("input", () => fitDraftTextarea(draftTextarea));
-  detailEl.querySelector("#improveDraftButton")?.addEventListener("click", async () => {
-    const textarea = detailEl.querySelector("#draftText");
-    const button = detailEl.querySelector("#improveDraftButton");
-    const tone = detailEl.querySelector("#draftTone")?.value || "professionell";
-    const previousLabel = button.textContent;
-    button.disabled = true;
-    button.textContent = "KI formuliert ...";
-    showNotice("Die KI erstellt einen individuellen Antwortentwurf ...");
-    try {
-      const result = await generateKiReply(email, tone, textarea.value);
-      textarea.value = result.reply;
-      fitDraftTextarea(textarea);
-      showNotice(`KI-Entwurf wurde erstellt${result.model ? ` (${result.model})` : ""}. Gmail wird erst beim Erstellen oder Aktualisieren geändert.`);
-    } catch (error) {
-      showNotice(error.message || "Die KI konnte keinen Entwurf erstellen.", "error");
-    } finally {
-      button.disabled = false;
-      button.textContent = previousLabel;
-    }
-  });
+  detailEl.querySelector("#improveDraftButton")?.addEventListener("click", () => runKiDraft(email));
+  if (!email.isSmartBooking && anthropicApiKey && !cachedKiDraft) {
+    window.setTimeout(() => {
+      if (activeId === `mail:${email.id}` && detailEl.querySelector("#draftText")?.dataset.kiBusy !== "true") {
+        runKiDraft(email, { automatic: true });
+      }
+    }, 80);
+  }
 }
 
 function renderDetail() {

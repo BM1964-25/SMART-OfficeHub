@@ -1617,6 +1617,35 @@ body[data-workspace="ki"] .workspaceGuide {
   gap: 10px;
 }
 
+.draftHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.draftSourceLabel {
+  border-radius: 999px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.draftSourceLabel.loading {
+  border-color: #c5dedd;
+  background: #effbfa;
+  color: #2f6f83;
+}
+
+.draftSourceLabel.success {
+  border-color: #b7d7b6;
+  background: #edf8ed;
+  color: #246b32;
+}
+
 .draftBox textarea {
   min-height: 280px;
   width: 100%;
