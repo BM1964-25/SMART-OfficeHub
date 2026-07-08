@@ -493,6 +493,7 @@ function toEmail(message, draftInfoByThread = new Map()) {
     gmailDraftId: draftInfo?.draftId || null,
     isSmartBooking: isSmartBookingMessage(message),
     gmailUrl: `https://mail.google.com/mail/?authuser=${encodeURIComponent(gmailAccount)}#all/${message.id}`,
+    gmailDraftsUrl: `https://mail.google.com/mail/?authuser=${encodeURIComponent(gmailAccount)}#drafts`,
     ...classification
   };
 }

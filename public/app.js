@@ -1642,6 +1642,7 @@ async function createDraft(email) {
   });
   markDraftCreated(email, result.result?.id || existingDraftId);
   email.hasGmailDraft = true;
+  email.gmailDraftsUrl = email.gmailDraftsUrl || "https://mail.google.com/mail/#drafts";
   showNotice(existingDraftId ? "Antwortentwurf wurde in Gmail aktualisiert." : "Antwortentwurf wurde als Gmail-Entwurf übertragen.");
   render();
 }
@@ -1786,6 +1787,7 @@ function renderEmailDetail(email) {
   const draftText = cachedKiDraft || defaultReply(email);
   const draftSource = cachedKiDraft ? "KI-Entwurf" : "Startentwurf";
   const draftSourceState = cachedKiDraft ? "success" : "fallback";
+  const gmailDraftsUrl = email.gmailDraftsUrl || "https://mail.google.com/mail/#drafts";
   const summaryLines = mailSummary(email)
     .map(([label, value]) => `<li><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</li>`)
     .join("");
@@ -1815,6 +1817,7 @@ function renderEmailDetail(email) {
       </div>
       <div class="actions">
         <button class="button secondary" type="button" id="draftButton">${existingDraftId ? "Entwurf in Gmail aktualisieren" : "Als Entwurf in Gmail übertragen"}</button>
+        ${hasDraft ? `<a class="button secondary" href="${escapeHtml(gmailDraftsUrl)}" target="_blank" rel="noreferrer">Gmail-Entwürfe öffnen</a>` : ""}
       </div>
     </div>`;
 
