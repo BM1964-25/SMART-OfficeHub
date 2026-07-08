@@ -76,12 +76,16 @@ let inboxStats = {
 const draftStorageKey = "smartOfficeHubDraftCreatedIds";
 const draftIdStorageKey = "smartOfficeHubDraftIds";
 const documentStatusStorageKey = "smartOfficeHubDocumentStatus";
+const workStatusStorageKey = "smartOfficeHubWorkStatus";
+const followUpStorageKey = "smartOfficeHubFollowUps";
 const anthropicApiKeyStorageKey = "smartOfficeHubAnthropicApiKey";
 const sidebarCollapsedStorageKey = "smartOfficeHubSidebarCollapsed";
 const hiddenCalendarsStorageKey = "smartOfficeHubHiddenCalendars";
 const draftCreatedIds = new Set(loadDraftCreatedIds());
 const draftIdsByEmail = loadDraftIds();
 const documentStatusByKey = loadDocumentStatus();
+const workStatusByKey = loadStoredObject(workStatusStorageKey);
+const followUpByKey = loadStoredObject(followUpStorageKey);
 const hiddenCalendarIds = new Set(loadHiddenCalendarIds());
 const documentAnalysisByKey = {};
 const autoKiDraftsByEmail = new Map();
@@ -423,6 +427,16 @@ function loadDocumentStatus() {
   }
 }
 
+function loadStoredObject(key) {
+  try {
+    const stored = localStorage.getItem(key);
+    const values = stored ? JSON.parse(stored) : {};
+    return values && typeof values === "object" && !Array.isArray(values) ? values : {};
+  } catch {
+    return {};
+  }
+}
+
 function loadHiddenCalendarIds() {
   try {
     const stored = localStorage.getItem(hiddenCalendarsStorageKey);
@@ -451,6 +465,14 @@ function saveDraftIds() {
 
 function saveDocumentStatus() {
   sessionStorage.setItem(documentStatusStorageKey, JSON.stringify(documentStatusByKey));
+}
+
+function saveStoredObject(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    showNotice("Der Arbeitsstatus konnte nicht dauerhaft gespeichert werden.", "error");
+  }
 }
 
 function saveHiddenCalendarIds() {
@@ -482,7 +504,9 @@ function exportOfficeHubBackup() {
     },
     local: {
       [sidebarCollapsedStorageKey]: sidebarCollapsed,
-      [hiddenCalendarsStorageKey]: [...hiddenCalendarIds]
+      [hiddenCalendarsStorageKey]: [...hiddenCalendarIds],
+      [workStatusStorageKey]: workStatusByKey,
+      [followUpStorageKey]: followUpByKey
     }
   };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
@@ -510,6 +534,12 @@ async function importOfficeHubBackup(file) {
     }
     if (Array.isArray(backup?.local?.[hiddenCalendarsStorageKey])) {
       localStorage.setItem(hiddenCalendarsStorageKey, JSON.stringify(backup.local[hiddenCalendarsStorageKey]));
+    }
+    if (backup?.local?.[workStatusStorageKey] && typeof backup.local[workStatusStorageKey] === "object") {
+      localStorage.setItem(workStatusStorageKey, JSON.stringify(backup.local[workStatusStorageKey]));
+    }
+    if (backup?.local?.[followUpStorageKey] && typeof backup.local[followUpStorageKey] === "object") {
+      localStorage.setItem(followUpStorageKey, JSON.stringify(backup.local[followUpStorageKey]));
     }
     showNotice("Datensicherung wurde wiederhergestellt. Die Ansicht wird neu geladen.");
     setTimeout(() => window.location.reload(), 650);
@@ -552,6 +582,94 @@ function markDraftCreated(email, draftId = "") {
     saveDraftIds();
   }
   saveDraftCreatedIds();
+}
+
+function workStatusLabel(value = "offen") {
+  const labelsByStatus = {
+    offen: "Offen",
+    "in-bearbeitung": "In Bearbeitung",
+    warten: "Warten auf Rückmeldung",
+    erledigt: "Erledigt",
+    wiedervorlage: "Wiedervorlage"
+  };
+  return labelsByStatus[value] || labelsByStatus.offen;
+}
+
+function workStatusFor(key) {
+  return workStatusByKey[key] || "offen";
+}
+
+function followUpFor(key) {
+  return followUpByKey[key] || "";
+}
+
+function setWorkStatus(key, value) {
+  if (!value || value === "offen") delete workStatusByKey[key];
+  else workStatusByKey[key] = value;
+  saveStoredObject(workStatusStorageKey, workStatusByKey);
+  render();
+}
+
+function setFollowUp(key, value) {
+  if (!value) delete followUpByKey[key];
+  else {
+    followUpByKey[key] = value;
+    if (!workStatusByKey[key] || workStatusByKey[key] === "offen") {
+      workStatusByKey[key] = "wiedervorlage";
+      saveStoredObject(workStatusStorageKey, workStatusByKey);
+    }
+  }
+  saveStoredObject(followUpStorageKey, followUpByKey);
+  render();
+}
+
+function renderWorkControl(key, label = "Arbeitsstatus") {
+  const status = workStatusFor(key);
+  const followUp = followUpFor(key);
+  return `
+    <section class="workControlBox">
+      <div class="summaryHead">
+        <span>${escapeHtml(label)}</span>
+        <small>${escapeHtml(workStatusLabel(status))}${followUp ? ` · Wiedervorlage ${escapeHtml(formatFollowUpDate(followUp))}` : ""}</small>
+      </div>
+      <div class="workControlGrid">
+        <label class="statusControl">
+          <span>Status</span>
+          <select class="workStatusSelect" data-work-key="${escapeHtml(key)}">
+            <option value="offen" ${status === "offen" ? "selected" : ""}>Offen</option>
+            <option value="in-bearbeitung" ${status === "in-bearbeitung" ? "selected" : ""}>In Bearbeitung</option>
+            <option value="warten" ${status === "warten" ? "selected" : ""}>Warten auf Rückmeldung</option>
+            <option value="wiedervorlage" ${status === "wiedervorlage" ? "selected" : ""}>Wiedervorlage</option>
+            <option value="erledigt" ${status === "erledigt" ? "selected" : ""}>Erledigt</option>
+          </select>
+        </label>
+        <label class="statusControl">
+          <span>Wiedervorlage</span>
+          <input class="followUpInput" type="date" data-work-key="${escapeHtml(key)}" value="${escapeHtml(followUp)}">
+        </label>
+      </div>
+    </section>
+  `;
+}
+
+function attachWorkControlHandlers() {
+  detailEl.querySelectorAll(".workStatusSelect").forEach((select) => {
+    select.addEventListener("change", () => setWorkStatus(select.dataset.workKey, select.value));
+  });
+  detailEl.querySelectorAll(".followUpInput").forEach((input) => {
+    input.addEventListener("change", () => setFollowUp(input.dataset.workKey, input.value));
+  });
+}
+
+function formatFollowUpDate(value = "") {
+  if (!value) return "";
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  }).format(date);
 }
 
 function formatDate(value, timestamp) {
@@ -994,9 +1112,39 @@ function documentTypeCount(types) {
   return documentItems().filter((item) => typeSet.has(item.documentType)).length;
 }
 
+function workStatusCount(status, prefix = "") {
+  return Object.entries(workStatusByKey)
+    .filter(([key, value]) => value === status && (!prefix || key.startsWith(prefix)))
+    .length;
+}
+
+function dueFollowUpCount(prefix = "") {
+  const endOfToday = new Date(new Date().setHours(23, 59, 59, 999));
+  return Object.entries(followUpByKey)
+    .filter(([key, value]) => {
+      const date = value ? new Date(`${value}T00:00:00`) : null;
+      return (!prefix || key.startsWith(prefix)) && date && !Number.isNaN(date.getTime()) && date <= endOfToday;
+    })
+    .length;
+}
+
 function todayFocusItems() {
+  const followUpTodayItems = Object.entries(followUpByKey)
+    .filter(([, value]) => {
+      const date = value ? new Date(`${value}T00:00:00`) : null;
+      return date && !Number.isNaN(date.getTime()) && date <= new Date(new Date().setHours(23, 59, 59, 999));
+    })
+    .map(([key, value]) => ({
+      type: key.startsWith("event:") ? "termin" : key.startsWith("document:") ? "dokument" : "mail",
+      key,
+      workspace: key.startsWith("event:") ? "termine" : key.startsWith("document:") ? "dokumente" : "mails",
+      title: "Wiedervorlage fällig",
+      meta: formatFollowUpDate(value),
+      action: "Arbeitsstatus prüfen und nächsten Schritt festlegen.",
+      score: 9
+    }));
   const mailItems = emails
-    .filter((email) => email.bucket === "antwort" || email.bucket === "prüfen" || isDocumentEmail(email))
+    .filter((email) => workStatusFor(`mail:${email.id}`) !== "erledigt" && (email.bucket === "antwort" || email.bucket === "prüfen" || isDocumentEmail(email)))
     .map((email) => {
       const assessment = aiEmailAssessment(email);
       return {
@@ -1013,7 +1161,7 @@ function todayFocusItems() {
   const eventItems = visibleCalendarEvents()
     .filter((event) => {
       const date = new Date(event.timestamp || event.start || 0);
-      return !Number.isNaN(date.getTime()) && isSameDay(date, new Date());
+      return workStatusFor(calendarEventKey(event)) !== "erledigt" && !Number.isNaN(date.getTime()) && isSameDay(date, new Date());
     })
     .map((event) => {
       const assessment = aiEventAssessment(event);
@@ -1029,7 +1177,7 @@ function todayFocusItems() {
     });
 
   const documentFocusItems = documentItems()
-    .filter((item) => item.status === "prüfen" || item.status === "neu" || ["Rechnung", "Angebot", "Vertrag"].includes(item.documentType))
+    .filter((item) => workStatusFor(item.key) !== "erledigt" && (item.status === "prüfen" || item.status === "neu" || ["Rechnung", "Angebot", "Vertrag"].includes(item.documentType)))
     .map((item) => {
       const assessment = aiDocumentAssessment(item);
       return {
@@ -1043,7 +1191,7 @@ function todayFocusItems() {
       };
     });
 
-  return [...mailItems, ...eventItems, ...documentFocusItems]
+  return [...followUpTodayItems, ...mailItems, ...eventItems, ...documentFocusItems]
     .sort((a, b) => b.score - a.score)
     .slice(0, 6);
 }
@@ -1111,7 +1259,8 @@ function renderSummary() {
       ["Info", bucketCount("info"), "mail"],
       ["Terminmails", emails.filter(isAppointmentEmail).length, "appointment"],
       ["Mit Anlagen", emails.filter(isDocumentEmail).length, "document"],
-      ["Entwürfe", draftCount, "mail"]
+      ["Entwürfe", draftCount, "mail"],
+      ["Warten", workStatusCount("warten", "mail:"), "mail"]
     ],
     termine: [
       ["Termine kommend", visibleCalendarEvents().length, "appointment"],
@@ -1119,7 +1268,8 @@ function renderSummary() {
       ["Heute", todayEventCount(), "appointment"],
       ["Kalender sichtbar", visibleCalendarCount(), "appointment"],
       ["Kalender ausgeblendet", hiddenCalendarCount, "appointment"],
-      ["Ganztägig", visibleCalendarEvents().filter((event) => event.isAllDay).length, "appointment"]
+      ["Ganztägig", visibleCalendarEvents().filter((event) => event.isAllDay).length, "appointment"],
+      ["Wiedervorlage", dueFollowUpCount("event:"), "appointment"]
     ],
     dokumente: [
       ["Dokumente gesamt", documents.length, "document"],
@@ -1128,7 +1278,8 @@ function renderSummary() {
       ["Erledigt", documents.filter((item) => item.status === "erledigt").length, "document"],
       ["Archivieren", documents.filter((item) => item.status === "archivieren").length, "document"],
       ["Rechnungen", documentTypeCount(["Rechnung"]), "document"],
-      ["Angebote/Verträge", documentTypeCount(["Angebot", "Vertrag"]), "document"]
+      ["Angebote/Verträge", documentTypeCount(["Angebot", "Vertrag"]), "document"],
+      ["Warten", workStatusCount("warten", "document:"), "document"]
     ],
     ki: [
       ["KI Hinweise", aiItems.length, "ai"],
@@ -2081,6 +2232,7 @@ function renderCalendarDetail(event) {
         <li><strong>Vorbereitung:</strong> Unterlagen, offene Rückfragen und Bezugsmails prüfen.</li>
       </ul>
     </section>
+    ${renderWorkControl(calendarEventKey(event), "Terminstatus")}
     ${renderAiEventBox(event)}
     <div class="detailGrid">
       <div class="fact"><span>Quelle</span>${escapeHtml(readableOrganizer(event.organizer))}</div>
@@ -2111,6 +2263,7 @@ function renderCalendarDetail(event) {
   `;
 
   detailEl.querySelector("#deleteCalendarEventButton")?.addEventListener("click", () => deleteCalendarEvent(event));
+  attachWorkControlHandlers();
 }
 
 function renderDocumentDetail(item) {
@@ -2142,6 +2295,7 @@ function renderDocumentDetail(item) {
       </ul>
     </section>
     ${renderAiDocumentBox(item)}
+    ${renderWorkControl(key, "Arbeitsstatus")}
     <section class="documentWorkBox">
       <div class="summaryHead">
         <span>Prüfstatus</span>
@@ -2186,6 +2340,7 @@ function renderDocumentDetail(item) {
     setDocumentStatus(key, event.target.value);
   });
   detailEl.querySelector("#analyzeDocumentButton")?.addEventListener("click", () => analyzeDocument(item));
+  attachWorkControlHandlers();
 }
 
 function renderEmailDetail(email) {
@@ -2247,6 +2402,7 @@ function renderEmailDetail(email) {
       </div>
       <ul>${summaryLines}</ul>
     </section>
+    ${renderWorkControl(`mail:${email.id}`, "Arbeitsstatus")}
     ${renderAiEmailBox(email)}
     <div class="detailGrid">
       <div class="fact"><span>Absender</span>${escapeHtml(formatMailAddress(email.from))}</div>
@@ -2277,6 +2433,7 @@ function renderEmailDetail(email) {
 
   detailEl.querySelector("#archiveButton").addEventListener("click", () => archiveEmail(email));
   detailEl.querySelector("#trashButton").addEventListener("click", () => trashEmail(email));
+  attachWorkControlHandlers();
   detailEl.querySelector("#draftButton")?.addEventListener("click", () => createDraft(email));
   const draftTextarea = detailEl.querySelector("#draftText");
   fitDraftTextarea(draftTextarea);
