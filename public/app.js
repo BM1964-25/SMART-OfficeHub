@@ -1261,6 +1261,27 @@ function formatEventRange(event) {
   return `${dateText}, ${startTime}${endTime ? ` - ${endTime}` : ""}`;
 }
 
+function readableEventStatus(status = "") {
+  const labels = {
+    confirmed: "Bestätigt",
+    tentative: "Vorläufig",
+    cancelled: "Abgesagt"
+  };
+  return labels[status] || "Kein Status angegeben";
+}
+
+function readableOrganizer(value = "") {
+  if (!value) return "Nicht ausgewiesen";
+  if (/^[a-z0-9]{16,}@import\.calendar\.google\.com$/i.test(value)) return "Importierter Kalender";
+  return formatMailAddress(value);
+}
+
+function readableAttendeeCount(event) {
+  const count = event.attendees?.length || 0;
+  if (!count) return "Keine Teilnehmer hinterlegt";
+  return `${count} Teilnehmer${count === 1 ? "" : ""}`;
+}
+
 function renderCalendarListItem(event, key) {
   const current = key === activeId ? "true" : "false";
   const snippet = event.location || event.description || event.organizer || "Kalendereintrag aus Google Calendar";
@@ -1677,11 +1698,11 @@ function renderCalendarDetail(event) {
     </section>
     ${renderAiEventBox(event)}
     <div class="detailGrid">
-      <div class="fact"><span>Organisator</span>${escapeHtml(event.organizer || "unbekannt")}</div>
+      <div class="fact"><span>Quelle</span>${escapeHtml(readableOrganizer(event.organizer))}</div>
       <div class="fact"><span>Kalender</span>${escapeHtml(event.calendarName || "Google Calendar")}</div>
-      <div class="fact"><span>Status</span>${escapeHtml(event.status || "unbekannt")}</div>
-      <div class="fact"><span>Beginn</span>${escapeHtml(formatEventRange(event))}</div>
-      <div class="fact"><span>Teilnehmer</span>${event.attendees?.length || 0}</div>
+      <div class="fact"><span>Status</span>${escapeHtml(readableEventStatus(event.status))}</div>
+      <div class="fact"><span>Zeit</span>${escapeHtml(formatEventRange(event))}</div>
+      <div class="fact"><span>Teilnehmer</span>${escapeHtml(readableAttendeeCount(event))}</div>
     </div>
     <div class="actions">
       ${event.htmlLink ? `<a class="button primary" href="${event.htmlLink}" target="_blank" rel="noreferrer">In Google Calendar öffnen</a>` : ""}

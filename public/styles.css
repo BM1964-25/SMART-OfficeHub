@@ -1534,6 +1534,7 @@ body[data-workspace="ki"] .workspaceGuide {
   border-radius: 8px;
   padding: 12px;
   background: #fbfaf7;
+  overflow-wrap: anywhere;
 }
 
 .fact span {
