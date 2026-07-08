@@ -970,17 +970,71 @@ function renderDashboardHeading() {
   document.body.dataset.workspace = activeWorkspace;
 }
 
+function selectedWeekEventCount() {
+  const weekDays = calendarWeekDays();
+  const weekEnd = new Date(weekDays[6]);
+  weekEnd.setHours(23, 59, 59, 999);
+  return visibleCalendarEvents().filter((event) => {
+    const date = new Date(event.timestamp || event.start || 0);
+    return !Number.isNaN(date.getTime()) && date >= weekDays[0] && date <= weekEnd;
+  }).length;
+}
+
+function todayEventCount() {
+  const today = new Date();
+  return visibleCalendarEvents().filter((event) => {
+    const date = new Date(event.timestamp || event.start || 0);
+    return !Number.isNaN(date.getTime()) && isSameDay(date, today);
+  }).length;
+}
+
+function documentTypeCount(types) {
+  const typeSet = new Set(types);
+  return documentItems().filter((item) => typeSet.has(item.documentType)).length;
+}
+
 function renderSummary() {
   const draftCount = emails.filter(hasCreatedDraft).length;
-  const metrics = [
-    ["Gesamt", emails.length, "mail"],
-    ["Antworten", bucketCount("antwort"), "mail"],
-    ["Zu prüfen", bucketCount("prüfen"), "mail"],
-    ["Termine", workspaceCount("termine"), "appointment"],
-    ["Dokumente", workspaceCount("dokumente"), "document"],
-    ["KI Hinweise", workspaceCount("ki"), "ai"],
-    ["Entwürfe erstellt", draftCount, "mail"]
-  ];
+  const documents = documentItems();
+  const aiItems = aiDailyItems();
+  const hiddenCalendarCount = calendars.filter((calendar) => hiddenCalendarIds.has(calendar.id)).length;
+  const metricsByWorkspace = {
+    mails: [
+      ["Mails gesamt", emails.length, "mail"],
+      ["Antworten", bucketCount("antwort"), "mail"],
+      ["Zu prüfen", bucketCount("prüfen"), "mail"],
+      ["Info", bucketCount("info"), "mail"],
+      ["Terminmails", emails.filter(isAppointmentEmail).length, "appointment"],
+      ["Mit Anlagen", emails.filter(isDocumentEmail).length, "document"],
+      ["Entwürfe", draftCount, "mail"]
+    ],
+    termine: [
+      ["Termine kommend", visibleCalendarEvents().length, "appointment"],
+      ["Gewählte Woche", selectedWeekEventCount(), "appointment"],
+      ["Heute", todayEventCount(), "appointment"],
+      ["Kalender sichtbar", visibleCalendarCount(), "appointment"],
+      ["Kalender ausgeblendet", hiddenCalendarCount, "appointment"],
+      ["Ganztägig", visibleCalendarEvents().filter((event) => event.isAllDay).length, "appointment"]
+    ],
+    dokumente: [
+      ["Dokumente gesamt", documents.length, "document"],
+      ["Neu", documents.filter((item) => item.status === "neu").length, "document"],
+      ["Zu prüfen", documents.filter((item) => item.status === "prüfen").length, "document"],
+      ["Erledigt", documents.filter((item) => item.status === "erledigt").length, "document"],
+      ["Archivieren", documents.filter((item) => item.status === "archivieren").length, "document"],
+      ["Rechnungen", documentTypeCount(["Rechnung"]), "document"],
+      ["Angebote/Verträge", documentTypeCount(["Angebot", "Vertrag"]), "document"]
+    ],
+    ki: [
+      ["KI Hinweise", aiItems.length, "ai"],
+      ["Mail-Hinweise", aiItems.filter((item) => item.aiType === "mail").length, "mail"],
+      ["Termin-Hinweise", aiItems.filter((item) => item.aiType === "termin").length, "appointment"],
+      ["Dokument-Hinweise", aiItems.filter((item) => item.aiType === "dokument").length, "document"],
+      ["Hohe Priorität", aiItems.filter((item) => item.assessment.priority === "hoch").length, "ai"],
+      ["Mittlere Priorität", aiItems.filter((item) => item.assessment.priority === "mittel").length, "ai"]
+    ]
+  };
+  const metrics = metricsByWorkspace[activeWorkspace] || metricsByWorkspace.mails;
   summaryEl.innerHTML = metrics
     .map(([label, value, group]) => `<article class="metric ${group}Metric"><strong>${value}</strong><span>${label}</span></article>`)
     .join("");
@@ -1860,7 +1914,7 @@ async function trashEmail(email) {
 }
 
 async function deleteCalendarEvent(event) {
-  if (!confirm(`Termin wirklich in Google Kalender löschen?\n\n${event.title}\n${formatEventRange(event)}\n\nDiese Aktion löscht den Termin im verbundenen Google Kalender. Ausblenden wäre nur eine Anzeige-Einstellung in SMART OfficeHub.`)) return;
+  if (!confirm(`Termin wirklich in Google Kalender löschen?\n\n${event.title}\n${formatEventRange(event)}\n\nDiese Aktion löscht nur diesen einzelnen Termin im verbundenen Google Kalender. Der Kalender selbst bleibt bestehen.`)) return;
   await api(`/api/calendar/events/${encodeURIComponent(event.calendarId)}/${encodeURIComponent(event.id)}`, { method: "DELETE" });
   showNotice("Termin wurde in Google Kalender gelöscht.");
   await loadEmails();
