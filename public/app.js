@@ -1225,8 +1225,15 @@ function nameFromMailText(text = "") {
   const introMatch = text.match(/mein name ist\s+([A-ZÄÖÜ][A-Za-zÄÖÜäöüß.-]+(?:\s+[A-ZÄÖÜ][A-Za-zÄÖÜäöüß.-]+){1,3})/i);
   if (introMatch) return introMatch[1].trim();
 
-  const signatureMatch = text.match(/(?:mit freundlichen grüßen|freundliche grüße|beste grüße|viele grüße)\s+([A-ZÄÖÜ][A-Za-zÄÖÜäöüß.-]+(?:\s+[A-ZÄÖÜ][A-Za-zÄÖÜäöüß.-]+){1,3})/i);
-  if (signatureMatch) return signatureMatch[1].trim();
+  const signatureMatch = text.match(/(?:mit freundlichen grüßen|freundliche grüße|beste grüße|viele grüße)\s*\n+\s*([^\n\r]+)/i);
+  if (signatureMatch) {
+    const signatureLine = signatureMatch[1]
+      .replace(/\b(Referentin|Geschäftsführung|Architektin|Philosophie|Dipl|Dr|Prof)\b.*$/i, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    const nameMatch = signatureLine.match(/^([A-ZÄÖÜ][A-Za-zÄÖÜäöüß.-]+(?:\s+[A-ZÄÖÜ][A-Za-zÄÖÜäöüß.-]+){1,2})/);
+    if (nameMatch) return nameMatch[1].trim();
+  }
 
   return "";
 }
@@ -1259,6 +1266,35 @@ function detectedContext(email) {
   if (textIncludes(text, ["rechnung", "zahlung", "mahnung", "beleg", "gutschrift"])) contexts.push("Rechnung/Zahlung");
   if (textIncludes(text, ["frage", "rückfrage", "bitte", "antwort", "rückmeldung"])) contexts.push("Rückfrage");
   return contexts.length ? contexts.join(", ") : "Kein spezieller Kontext erkannt";
+}
+
+function requestedAppointmentDates(text = "") {
+  const dates = new Set();
+  const patterns = [
+    /\b(?:montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag),?\s*(?:den\s*)?(\d{1,2}\.\s*\d{1,2}\.?(?:\s*\d{2,4})?)/gi,
+    /\b(\d{1,2}\.\s*(?:oder|und)\s*\d{1,2}\.\s*(?:januar|februar|märz|maerz|april|mai|juni|juli|august|september|oktober|november|dezember))/gi,
+    /\b(\d{1,2}\.\s*(?:januar|februar|märz|maerz|april|mai|juni|juli|august|september|oktober|november|dezember))/gi
+  ];
+  for (const pattern of patterns) {
+    for (const match of text.matchAll(pattern)) {
+      dates.add(match[1].replace(/\s+/g, " ").trim());
+    }
+  }
+  return [...dates];
+}
+
+function isRecruitingOrProjectOpportunity(text = "") {
+  return textIncludes(text.toLowerCase(), [
+    "profil",
+    "position",
+    "projektmanagement",
+    "geschäftsführer",
+    "verfügbar",
+    "verfuegbar",
+    "interesse an einer mitarbeit",
+    "persönlichen gespräch",
+    "persoenlichen gespraech"
+  ]);
 }
 
 function mailSummary(email) {
@@ -1308,13 +1344,25 @@ function workspaceNotice(email) {
 
 function defaultReply(email) {
   const combined = [email.from, email.subject, email.snippet, email.bodyText, email.nextAction].join(" ").toLowerCase();
+  const sourceText = [email.subject, email.snippet, email.bodyText].join(" ");
   const greeting = salutation(email);
+  const requestedDates = requestedAppointmentDates(sourceText);
+
+  if (isRecruitingOrProjectOpportunity(sourceText)) {
+    const dateLine = requestedDates.length
+      ? `Für ein Gespräch mit Herrn Gerlich kann ich Ihnen gerne eine Rückmeldung zu den genannten Terminen (${requestedDates.join(", ")}) geben. Meine passenden Zeitfenster sind: [Zeitfenster eintragen].`
+      : "Für ein Gespräch mit Herrn Gerlich kann ich Ihnen gerne kurzfristig passende Zeitfenster nennen.";
+    return `${greeting}\n\nvielen Dank für Ihre Nachricht und das Interesse an meinem Profil.\n\nGrundsätzlich bin ich an einem Austausch zu einer möglichen Mitarbeit im Projektmanagement interessiert und offen für ein persönliches Gespräch.\n\n${dateLine}\n\nAlternativ können wir die Abstimmung auch telefonisch kurz klären.\n\nMit freundlichen Grüßen\nBernhard Metzger`;
+  }
 
   if (textIncludes(combined, ["happ", "baurevision", "festool", "tts", "bauprojekt", "baubegleitung"])) {
     return `${greeting}\n\nvielen Dank für Ihre Anfrage und Ihr Interesse an meiner Baurevision.\n\nGerne tausche ich mich mit Ihnen zu Ihrem Bauprojekt aus und bespreche, welche Punkte aus Revisionssicht sinnvoll geprüft werden sollten. Senden Sie mir dafür gerne zwei bis drei Terminvorschläge für ein kurzes Erstgespräch oder vorab ein paar Eckdaten zum Projekt, damit ich mich gezielt vorbereiten kann.\n\nMit freundlichen Grüßen\nBernhard Metzger`;
   }
 
   if (textIncludes(combined, ["termin", "kalender", "meeting", "besprechung", "rückruf", "telefonat", "call"])) {
+    if (requestedDates.length) {
+      return `${greeting}\n\nvielen Dank für Ihre Nachricht.\n\nGerne stimme ich den Termin mit Ihnen ab. Zu den genannten Terminen (${requestedDates.join(", ")}) kann ich Ihnen folgende Zeitfenster anbieten: [Zeitfenster eintragen].\n\nBitte bestätigen Sie mir kurz, welcher Termin für Sie und die weiteren Teilnehmer am besten passt.\n\nMit freundlichen Grüßen\nBernhard Metzger`;
+    }
     return `${greeting}\n\nvielen Dank für Ihre Nachricht.\n\nGerne stimme ich einen passenden Termin mit Ihnen ab. Bitte senden Sie mir zwei bis drei Zeitfenster, die für Sie gut passen. Falls es bereits Unterlagen oder konkrete Punkte für das Gespräch gibt, können Sie mir diese gerne vorab mitschicken.\n\nMit freundlichen Grüßen\nBernhard Metzger`;
   }
 
