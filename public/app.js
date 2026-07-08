@@ -94,6 +94,7 @@ let sidebarCollapsed = localStorage.getItem(sidebarCollapsedStorageKey) === "tru
 const noticeEl = document.querySelector("#notice");
 const dashboardTitleEl = document.querySelector("#dashboardTitle");
 const dashboardSublineEl = document.querySelector("#dashboardSubline");
+const todayFocusEl = document.querySelector("#todayFocus");
 const summaryEl = document.querySelector("#summary");
 const workspaceTabsEl = document.querySelector("#workspaceTabs");
 const workspaceGuideEl = document.querySelector("#workspaceGuide");
@@ -991,6 +992,110 @@ function todayEventCount() {
 function documentTypeCount(types) {
   const typeSet = new Set(types);
   return documentItems().filter((item) => typeSet.has(item.documentType)).length;
+}
+
+function todayFocusItems() {
+  const mailItems = emails
+    .filter((email) => email.bucket === "antwort" || email.bucket === "prüfen" || isDocumentEmail(email))
+    .map((email) => {
+      const assessment = aiEmailAssessment(email);
+      return {
+        type: "mail",
+        key: `mail:${email.id}`,
+        workspace: "mails",
+        title: email.subject || "E-Mail ohne Betreff",
+        meta: email.from || "Absender unbekannt",
+        action: assessment.nextAction || email.nextAction || "E-Mail prüfen.",
+        score: assessment.score + (email.bucket === "antwort" ? 3 : 0)
+      };
+    });
+
+  const eventItems = visibleCalendarEvents()
+    .filter((event) => {
+      const date = new Date(event.timestamp || event.start || 0);
+      return !Number.isNaN(date.getTime()) && isSameDay(date, new Date());
+    })
+    .map((event) => {
+      const assessment = aiEventAssessment(event);
+      return {
+        type: "termin",
+        key: calendarEventKey(event),
+        workspace: "termine",
+        title: event.title || "Termin ohne Titel",
+        meta: formatEventListTime(event),
+        action: assessment.nextAction || "Termin vorbereiten.",
+        score: assessment.score + 4
+      };
+    });
+
+  const documentFocusItems = documentItems()
+    .filter((item) => item.status === "prüfen" || item.status === "neu" || ["Rechnung", "Angebot", "Vertrag"].includes(item.documentType))
+    .map((item) => {
+      const assessment = aiDocumentAssessment(item);
+      return {
+        type: "dokument",
+        key: item.key,
+        workspace: "dokumente",
+        title: item.attachment.filename || "Dokument ohne Dateiname",
+        meta: `${item.documentType} · ${documentStatusLabel(item.status)}`,
+        action: assessment.nextAction || item.assessment.nextAction || "Dokument prüfen.",
+        score: assessment.score + (item.status === "prüfen" ? 3 : 0)
+      };
+    });
+
+  return [...mailItems, ...eventItems, ...documentFocusItems]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 6);
+}
+
+function renderTodayFocus() {
+  const items = todayFocusItems();
+  const replyCount = emails.filter((email) => email.bucket === "antwort").length;
+  const checkCount = emails.filter((email) => email.bucket === "prüfen").length + documentItems().filter((item) => item.status === "prüfen").length;
+  const eventCount = todayEventCount();
+  const intro = items.length
+    ? `${replyCount} Antworten offen · ${eventCount} Termine heute · ${checkCount} Prüffälle`
+    : "Aktuell keine priorisierten Aufgaben aus den geladenen Daten.";
+
+  todayFocusEl.innerHTML = `
+    <div class="todayFocusHead">
+      <div>
+        <p class="eyebrow">Heute wichtig</p>
+        <h3>Arbeitsübersicht</h3>
+        <span>${escapeHtml(intro)}</span>
+      </div>
+      <button class="button secondary" type="button" id="openKiOverviewButton">KI Übersicht öffnen</button>
+    </div>
+    <div class="todayFocusGrid">
+      ${items.length
+        ? items.map((item) => `
+          <button class="todayFocusItem ${escapeHtml(item.type)}Focus" type="button" data-workspace="${escapeHtml(item.workspace)}" data-id="${escapeHtml(item.key)}">
+            <span>${escapeHtml(item.type === "mail" ? "Mail" : item.type === "termin" ? "Termin" : "Dokument")}</span>
+            <strong>${escapeHtml(item.title)}</strong>
+            <small>${escapeHtml(item.meta)}</small>
+            <em>${escapeHtml(item.action)}</em>
+          </button>
+        `).join("")
+        : '<div class="todayFocusEmpty">Aktualisieren oder einen Arbeitsbereich öffnen, um neue Hinweise zu sehen.</div>'}
+    </div>
+  `;
+
+  todayFocusEl.querySelector("#openKiOverviewButton")?.addEventListener("click", () => {
+    searchEl.value = "";
+    activeWorkspace = "ki";
+    activeBucket = "alle";
+    activeId = filteredItems()[0]?.key || null;
+    render();
+  });
+  todayFocusEl.querySelectorAll(".todayFocusItem").forEach((button) => {
+    button.addEventListener("click", () => {
+      searchEl.value = "";
+      activeWorkspace = button.dataset.workspace;
+      activeBucket = "alle";
+      activeId = button.dataset.id;
+      render();
+    });
+  });
 }
 
 function renderSummary() {
@@ -1914,7 +2019,7 @@ async function trashEmail(email) {
 }
 
 async function deleteCalendarEvent(event) {
-  if (!confirm(`Termin wirklich in Google Kalender löschen?\n\n${event.title}\n${formatEventRange(event)}\n\nDiese Aktion löscht nur diesen einzelnen Termin im verbundenen Google Kalender. Der Kalender selbst bleibt bestehen.`)) return;
+  if (!confirm(`Termin wirklich in Google Kalender löschen?\n\n${event.title}\n${formatEventRange(event)}\n\nDiese Aktion löscht nur diesen einzelnen Termin im verbundenen Google Kalender.`)) return;
   await api(`/api/calendar/events/${encodeURIComponent(event.calendarId)}/${encodeURIComponent(event.id)}`, { method: "DELETE" });
   showNotice("Termin wurde in Google Kalender gelöscht.");
   await loadEmails();
@@ -2206,6 +2311,7 @@ function renderDetail() {
 
 function render() {
   renderDashboardHeading();
+  renderTodayFocus();
   renderSummary();
   renderWorkspaceTabs();
   renderWorkspaceGuide();
