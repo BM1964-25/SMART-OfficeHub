@@ -12,12 +12,14 @@ const workspaceLabels = {
   mails: "Mails",
   termine: "Termine",
   dokumente: "Dokumente",
+  aufgaben: "Aufgaben",
   ki: "KI Übersicht"
 };
 const workspaceIcons = {
   mails: "mail",
   termine: "calendar",
   dokumente: "file",
+  aufgaben: "tasks",
   ki: "sparkles"
 };
 const workspaceMeta = {
@@ -32,6 +34,10 @@ const workspaceMeta = {
   dokumente: {
     title: "Dokumenten Dashboard",
     subline: "Arbeitsbereich für Anhänge, Rechnungen, Angebote, Verträge und Prüfunterlagen"
+  },
+  aufgaben: {
+    title: "Aufgaben Dashboard",
+    subline: "Status- und Wiedervorlage-Zentrale für Mails, Termine und Dokumente"
   },
   ki: {
     title: "KI Dashboard",
@@ -54,18 +60,34 @@ const workspaceGuides = {
     text: "Hier werden Anhänge und Unterlagen als eigene Arbeitsliste sichtbar, damit Rechnungen, Angebote, Verträge und Prüfunterlagen nicht in Mails untergehen.",
     action: "Listen zeigen Datei, Typ und Status. Alle Angaben zur Quellmail, Analyse und Bewertung stehen im Detailbereich."
   },
+  aufgaben: {
+    label: "Aufgaben-Arbeitsbereich",
+    text: "Hier laufen Mails, Termine und Dokumente zusammen, sobald ein Arbeitsstatus, eine Wiedervorlage oder ein klarer Prüfbedarf besteht.",
+    action: "Nächster Schritt: Nach Status filtern, fällige Wiedervorlagen bearbeiten und erledigte Aufgaben abschließen."
+  },
   ki: {
     label: "KI Übersicht",
     text: "Hier bündelt SMART OfficeHub wichtige Hinweise aus Mails, Terminen und Dokumenten zu einer Prioritätenliste.",
     action: "Nächster Schritt: wichtigste Hinweise zuerst prüfen und danach in den jeweiligen Arbeitsbereich wechseln."
   }
 };
-const workspaceOrder = ["mails", "termine", "dokumente", "ki"];
+const workspaceOrder = ["mails", "termine", "dokumente", "aufgaben", "ki"];
+const taskFilterLabels = {
+  alle: "Alle",
+  offen: "Offen",
+  "in-bearbeitung": "In Bearbeitung",
+  warten: "Warten",
+  wiedervorlage: "Wiedervorlage",
+  faellig: "Fällig",
+  erledigt: "Erledigt"
+};
+const taskFilterOrder = ["alle", "offen", "in-bearbeitung", "warten", "wiedervorlage", "faellig", "erledigt"];
 let emails = [];
 let calendarEvents = [];
 let calendars = [];
 let activeWorkspace = "mails";
 let activeBucket = "alle";
+let activeTaskFilter = "alle";
 let activeId = null;
 let calendarWeekOffset = 0;
 let inboxStats = {
@@ -155,6 +177,7 @@ function iconSvg(name) {
     mail: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4z"></path><path d="m4 7 8 6 8-6"></path></svg>',
     calendar: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v15H5z"></path><path d="M8 3v4"></path><path d="M16 3v4"></path><path d="M5 10h14"></path></svg>',
     file: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"></path><path d="M14 3v5h5"></path><path d="M9 13h6"></path><path d="M9 17h6"></path></svg>',
+    tasks: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11"></path><path d="M9 12h11"></path><path d="M9 18h11"></path><path d="m4 6 1 1 2-2"></path><path d="m4 12 1 1 2-2"></path><path d="m4 18 1 1 2-2"></path></svg>',
     sparkles: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"></path><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8z"></path></svg>',
     panelLeftClose: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"></path><path d="M9 5v14"></path><path d="m16 10-2 2 2 2"></path></svg>',
     panelLeftOpen: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"></path><path d="M9 5v14"></path><path d="m14 10 2 2-2 2"></path></svg>',
@@ -603,6 +626,12 @@ function followUpFor(key) {
   return followUpByKey[key] || "";
 }
 
+function isFollowUpDue(key) {
+  const value = followUpFor(key);
+  const date = value ? new Date(`${value}T00:00:00`) : null;
+  return Boolean(date && !Number.isNaN(date.getTime()) && date <= new Date(new Date().setHours(23, 59, 59, 999)));
+}
+
 function setWorkStatus(key, value) {
   if (!value || value === "offen") delete workStatusByKey[key];
   else workStatusByKey[key] = value;
@@ -867,9 +896,93 @@ function calendarEventKey(event) {
   return `event:${event.calendarId || "calendar"}:${event.id}`;
 }
 
+function sourceStatusFor(key) {
+  return workStatusFor(key);
+}
+
+function isActionableTask(task) {
+  return task.status !== "offen" || task.followUp || task.defaultActionable === true;
+}
+
+function taskItems() {
+  const mailTasks = emails.map((email) => {
+    const key = `mail:${email.id}`;
+    const assessment = aiEmailAssessment(email);
+    return {
+      kind: "task",
+      key: `task:${key}`,
+      sourceKey: key,
+      targetWorkspace: "mails",
+      sourceType: "Mail",
+      title: email.subject || "E-Mail ohne Betreff",
+      meta: email.from || "Absender unbekannt",
+      status: sourceStatusFor(key),
+      followUp: followUpFor(key),
+      defaultActionable: email.bucket === "antwort" || email.bucket === "prüfen" || assessment.replyNeeded || isDocumentEmail(email),
+      action: assessment.nextAction || email.nextAction || "E-Mail prüfen.",
+      score: assessment.score + (email.bucket === "antwort" ? 3 : 0)
+    };
+  });
+
+  const eventTasks = visibleCalendarEvents().map((event) => {
+    const key = calendarEventKey(event);
+    const assessment = aiEventAssessment(event);
+    const date = event.start ? new Date(event.start) : null;
+    const today = date && !Number.isNaN(date.getTime()) && isSameDay(date, new Date());
+    return {
+      kind: "task",
+      key: `task:${key}`,
+      sourceKey: key,
+      targetWorkspace: "termine",
+      sourceType: "Termin",
+      title: event.title || "Termin ohne Titel",
+      meta: `${formatEventListDate(event)} · ${formatEventListTime(event)}`,
+      status: sourceStatusFor(key),
+      followUp: followUpFor(key),
+      defaultActionable: today || assessment.priority !== "niedrig",
+      action: assessment.nextAction || "Termin prüfen.",
+      score: assessment.score + (today ? 4 : 0)
+    };
+  });
+
+  const documentTasks = documentItems().map((item) => {
+    const assessment = aiDocumentAssessment(item);
+    return {
+      kind: "task",
+      key: `task:${item.key}`,
+      sourceKey: item.key,
+      targetWorkspace: "dokumente",
+      sourceType: "Dokument",
+      title: item.attachment.filename || "Dokument ohne Dateiname",
+      meta: `${item.documentType} · ${documentStatusLabel(item.status)}`,
+      status: sourceStatusFor(item.key),
+      followUp: followUpFor(item.key),
+      defaultActionable: item.status === "neu" || item.status === "prüfen" || ["Rechnung", "Angebot", "Vertrag"].includes(item.documentType),
+      action: assessment.nextAction || item.assessment.nextAction || "Dokument prüfen.",
+      score: assessment.score + (item.status === "prüfen" ? 3 : 0)
+    };
+  });
+
+  return [...mailTasks, ...eventTasks, ...documentTasks]
+    .filter(isActionableTask)
+    .sort((a, b) => {
+      if (isFollowUpDue(a.sourceKey) !== isFollowUpDue(b.sourceKey)) return isFollowUpDue(a.sourceKey) ? -1 : 1;
+      return b.score - a.score;
+    });
+}
+
+function filteredTaskItems(filter = activeTaskFilter) {
+  return taskItems().filter((task) => {
+    if (filter === "alle") return task.status !== "erledigt";
+    if (filter === "faellig") return isFollowUpDue(task.sourceKey);
+    return task.status === filter;
+  });
+}
+
 function workspaceCount(workspace) {
   if (workspace === "termine") return visibleCalendarEvents().length;
   if (workspace === "dokumente") return documentItems().length;
+  if (workspace === "aufgaben") return filteredTaskItems("alle").length;
   if (workspace === "ki") return aiDailyItems().length;
   return workspaceEmails(workspace).length;
 }
@@ -892,6 +1005,9 @@ function itemSearchText(item) {
     if (item.aiType === "mail") return [item.email.from, item.email.subject, item.email.bodyText, item.assessment.highlights.join(" "), item.assessment.nextAction].join(" ").toLowerCase();
     if (item.aiType === "termin") return [item.event.title, item.event.description, item.event.location, item.assessment.prep.join(" ")].join(" ").toLowerCase();
     if (item.aiType === "dokument") return [item.document.attachment.filename, item.document.email.subject, item.assessment.risks.join(" "), item.assessment.nextAction].join(" ").toLowerCase();
+  }
+  if (item.kind === "task") {
+    return [item.sourceType, item.title, item.meta, item.action, workStatusLabel(item.status), item.followUp].join(" ").toLowerCase();
   }
   return emailSearchText(item.email);
 }
@@ -1076,6 +1192,9 @@ function workspaceItems() {
   if (activeWorkspace === "dokumente") {
     return documentItems();
   }
+  if (activeWorkspace === "aufgaben") {
+    return filteredTaskItems();
+  }
   if (activeWorkspace === "ki") {
     return aiDailyItems();
   }
@@ -1191,8 +1310,17 @@ function todayFocusItems() {
       };
     });
 
-  return [...followUpTodayItems, ...mailItems, ...eventItems, ...documentFocusItems]
+  const uniqueItems = [];
+  const seenKeys = new Set();
+  [...followUpTodayItems, ...mailItems, ...eventItems, ...documentFocusItems]
     .sort((a, b) => b.score - a.score)
+    .forEach((item) => {
+      if (seenKeys.has(item.key)) return;
+      seenKeys.add(item.key);
+      uniqueItems.push(item);
+    });
+
+  return uniqueItems
     .slice(0, 6);
 }
 
@@ -1288,6 +1416,14 @@ function renderSummary() {
       ["Dokument-Hinweise", aiItems.filter((item) => item.aiType === "dokument").length, "document"],
       ["Hohe Priorität", aiItems.filter((item) => item.assessment.priority === "hoch").length, "ai"],
       ["Mittlere Priorität", aiItems.filter((item) => item.assessment.priority === "mittel").length, "ai"]
+    ],
+    aufgaben: [
+      ["Aufgaben offen", filteredTaskItems("alle").length, "ai"],
+      ["Fällig", filteredTaskItems("faellig").length, "ai"],
+      ["In Bearbeitung", filteredTaskItems("in-bearbeitung").length, "ai"],
+      ["Warten", filteredTaskItems("warten").length, "ai"],
+      ["Wiedervorlage", filteredTaskItems("wiedervorlage").length, "ai"],
+      ["Erledigt", filteredTaskItems("erledigt").length, "ai"]
     ]
   };
   const metrics = metricsByWorkspace[activeWorkspace] || metricsByWorkspace.mails;
@@ -1321,6 +1457,7 @@ function renderWorkspaceTabs() {
     button.addEventListener("click", () => {
       activeWorkspace = button.dataset.workspace;
       activeBucket = "alle";
+      activeTaskFilter = "alle";
       activeId = filteredItems()[0]?.key || null;
       render();
     });
@@ -1339,7 +1476,24 @@ function renderWorkspaceGuide() {
 }
 
 function renderTabs() {
-  tabsEl.hidden = activeWorkspace !== "mails";
+  tabsEl.hidden = activeWorkspace !== "mails" && activeWorkspace !== "aufgaben";
+  if (activeWorkspace === "aufgaben") {
+    tabsEl.innerHTML = taskFilterOrder
+      .map((filter) => {
+        const pressed = filter === activeTaskFilter ? "true" : "false";
+        return `<button class="tab" type="button" data-task-filter="${filter}" aria-pressed="${pressed}">${taskFilterLabels[filter]} (${filteredTaskItems(filter).length})</button>`;
+      })
+      .join("");
+
+    tabsEl.querySelectorAll("button").forEach((button) => {
+      button.addEventListener("click", () => {
+        activeTaskFilter = button.dataset.taskFilter;
+        activeId = filteredItems()[0]?.key || null;
+        render();
+      });
+    });
+    return;
+  }
   if (activeWorkspace !== "mails") {
     tabsEl.innerHTML = "";
     return;
@@ -1364,7 +1518,7 @@ function renderTabs() {
 function filteredItems() {
   const query = searchEl.value.trim().toLowerCase();
   return workspaceItems().filter((item) => {
-    const inBucket = item.kind === "event" || item.kind === "document" || item.kind === "ai" || activeBucket === "alle" || item.email.bucket === activeBucket;
+    const inBucket = item.kind === "event" || item.kind === "document" || item.kind === "ai" || item.kind === "task" || activeBucket === "alle" || item.email.bucket === activeBucket;
     const haystack = itemSearchText(item);
     return inBucket && (!query || haystack.includes(query));
   });
@@ -1510,7 +1664,9 @@ function renderList() {
         ? "Keine Anhänge im geladenen Posteingang gefunden."
         : activeWorkspace === "ki"
           ? "Keine KI-Hinweise mit Priorität gefunden."
-          : "Keine passenden E-Mails gefunden.";
+          : activeWorkspace === "aufgaben"
+            ? "Keine Aufgaben im gewählten Status gefunden."
+            : "Keine passenden E-Mails gefunden.";
     listEl.innerHTML = `${activeWorkspace === "termine" ? renderCalendarWorkspaceHeader(list) : ""}<div class="empty">${emptyText}</div>`;
     detailEl.innerHTML = '<div class="empty">Aktualisiere den Posteingang oder passe die Suche an.</div>';
     attachCalendarListControls();
@@ -1524,6 +1680,7 @@ function renderList() {
       if (item.kind === "event") return renderCalendarListItem(item.event, item.key);
       if (item.kind === "document") return renderDocumentListItem(item);
       if (item.kind === "ai") return renderAiListItem(item);
+      if (item.kind === "task") return renderTaskListItem(item);
       const email = item.email;
       const current = item.key === activeId ? "true" : "false";
       const draftClass = hasCreatedDraft(email) ? "draftCreated" : "";
@@ -1587,6 +1744,26 @@ function attachCalendarListControls() {
       render();
     });
   });
+}
+
+function renderTaskListItem(item) {
+  const current = item.key === activeId ? "true" : "false";
+  const due = isFollowUpDue(item.sourceKey);
+  return `
+    <button class="mailItem taskItem ${due ? "taskDue" : ""}" type="button" data-id="${item.key}" aria-current="${current}">
+      <span class="mailHead">
+        <span class="sender">${escapeHtml(item.sourceType)}</span>
+        <span class="date">${escapeHtml(workStatusLabel(item.status))}</span>
+      </span>
+      <span class="subject">${escapeHtml(item.title)}</span>
+      <span class="snippet">${escapeHtml(item.action)}</span>
+      <span class="badges">
+        <span class="badge aiBadge">${escapeHtml(workStatusLabel(item.status))}</span>
+        ${item.followUp ? `<span class="badge bucket">Wiedervorlage ${escapeHtml(formatFollowUpDate(item.followUp))}</span>` : ""}
+        <span class="badge ${due ? "hoch" : "mittel"}">${due ? "fällig" : "Aufgabe"}</span>
+      </span>
+    </button>
+  `;
 }
 
 function renderAiListItem(item) {
@@ -2155,6 +2332,44 @@ function renderAiDetail(item) {
   });
 }
 
+function renderTaskDetail(item) {
+  detailEl.innerHTML = `
+    <p class="panelLabel">Aufgabe</p>
+    <div class="badges">
+      <span class="badge aiBadge">${escapeHtml(item.sourceType)}</span>
+      <span class="badge bucket">${escapeHtml(workStatusLabel(item.status))}</span>
+      ${item.followUp ? `<span class="badge appointmentBadge">Wiedervorlage ${escapeHtml(formatFollowUpDate(item.followUp))}</span>` : ""}
+    </div>
+    <h2>${escapeHtml(item.title)}</h2>
+    <section class="mailSummaryBox" aria-label="Aufgaben-Zusammenfassung">
+      <div class="summaryHead">
+        <span>Aufgaben-Zusammenfassung</span>
+        <small>${isFollowUpDue(item.sourceKey) ? "fällig" : "Arbeitsliste"}</small>
+      </div>
+      <ul>
+        <li><strong>Quelle:</strong> ${escapeHtml(item.sourceType)}</li>
+        <li><strong>Status:</strong> ${escapeHtml(workStatusLabel(item.status))}</li>
+        <li><strong>Wiedervorlage:</strong> ${item.followUp ? escapeHtml(formatFollowUpDate(item.followUp)) : "Keine Wiedervorlage gesetzt"}</li>
+        <li><strong>Nächster Schritt:</strong> ${escapeHtml(item.action)}</li>
+      </ul>
+    </section>
+    ${renderWorkControl(item.sourceKey, "Arbeitsstatus")}
+    <div class="actions">
+      <button class="button primary" type="button" id="openTaskSource">Ursprung öffnen</button>
+    </div>
+    <div class="systemNotice">Diese Aufgabe ist keine separate Kopie. Sie verweist auf die ursprüngliche Mail, den Termin oder das Dokument und nutzt denselben Arbeitsstatus.</div>
+  `;
+
+  detailEl.querySelector("#openTaskSource")?.addEventListener("click", () => {
+    searchEl.value = "";
+    activeWorkspace = item.targetWorkspace;
+    activeBucket = "alle";
+    activeId = item.sourceKey;
+    render();
+  });
+  attachWorkControlHandlers();
+}
+
 async function archiveEmail(email) {
   if (!confirm(`E-Mail archivieren?\n\n${email.subject}`)) return;
   await api(`/api/messages/${email.id}/archive`, { method: "POST" });
@@ -2461,6 +2676,10 @@ function renderDetail() {
   }
   if (item.kind === "ai") {
     renderAiDetail(item);
+    return;
+  }
+  if (item.kind === "task") {
+    renderTaskDetail(item);
     return;
   }
   renderEmailDetail(item.email);

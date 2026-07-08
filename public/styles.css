@@ -1087,6 +1087,10 @@ body[data-workspace="dokumente"] .workspaceGuide {
   border-left-color: var(--slate);
 }
 
+body[data-workspace="aufgaben"] .workspaceGuide {
+  border-left-color: var(--teal);
+}
+
 body[data-workspace="ki"] .workspaceGuide {
   border-left-color: var(--ai);
 }
@@ -1205,6 +1209,16 @@ body[data-workspace="ki"] .workspaceGuide {
   background: #f7fcfb;
 }
 
+.mailItem.taskItem {
+  border-left-color: var(--teal);
+  background: #f7fcfb;
+}
+
+.mailItem.taskDue {
+  border-left-color: var(--red);
+  background: #fff7f5;
+}
+
 .mailItem:hover,
 .mailItem[aria-current="true"] {
   background: #f0f6f4;
@@ -1228,6 +1242,16 @@ body[data-workspace="ki"] .workspaceGuide {
 .mailItem.aiItem:hover,
 .mailItem.aiItem[aria-current="true"] {
   background: #e8f5f4;
+}
+
+.mailItem.taskItem:hover,
+.mailItem.taskItem[aria-current="true"] {
+  background: #e7f6f4;
+}
+
+.mailItem.taskDue:hover,
+.mailItem.taskDue[aria-current="true"] {
+  background: #fff0ec;
 }
 
 .calendarOverview {
