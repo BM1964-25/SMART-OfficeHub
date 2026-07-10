@@ -2163,6 +2163,12 @@ body[data-workspace="ki"] .workspaceGuide {
   color: var(--blue);
 }
 
+.draftCopyIconButton.copied {
+  border-color: #9acb9a;
+  background: #eaf7ea;
+  color: #1f7a35;
+}
+
 .draftCopyIconButton svg {
   width: 17px;
   height: 17px;

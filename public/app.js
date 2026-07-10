@@ -199,14 +199,21 @@ function hideNotice() {
   noticeEl.textContent = "";
 }
 
-async function copyTextToClipboard(text) {
+async function copyTextToClipboard(text, sourceElement = null) {
   if (!text.trim()) {
     showNotice("Der Antwortentwurf ist leer.", "error");
-    return;
+    return false;
   }
   try {
     if (navigator.clipboard?.writeText && window.isSecureContext) {
       await navigator.clipboard.writeText(text);
+    } else if (sourceElement) {
+      sourceElement.focus();
+      sourceElement.select();
+      sourceElement.setSelectionRange(0, sourceElement.value.length);
+      if (!document.execCommand("copy")) {
+        throw new Error("execCommand copy failed");
+      }
     } else {
       const temp = document.createElement("textarea");
       temp.value = text;
@@ -217,13 +224,32 @@ async function copyTextToClipboard(text) {
       temp.focus();
       temp.select();
       temp.setSelectionRange(0, temp.value.length);
-      document.execCommand("copy");
+      if (!document.execCommand("copy")) {
+        throw new Error("execCommand copy failed");
+      }
       temp.remove();
     }
     showNotice("Antwortentwurf wurde kopiert.");
+    return true;
   } catch (error) {
     showNotice("Antwortentwurf konnte nicht kopiert werden.", "error");
+    return false;
   }
+}
+
+function showCopySuccess(button) {
+  if (!button) return;
+  const previousHtml = button.innerHTML;
+  button.classList.add("copied");
+  button.innerHTML = iconSvg("check");
+  button.setAttribute("aria-label", "Antwortentwurf kopiert");
+  button.title = "Kopiert";
+  window.setTimeout(() => {
+    button.classList.remove("copied");
+    button.innerHTML = previousHtml;
+    button.setAttribute("aria-label", "Antwortentwurf kopieren");
+    button.title = "Antwortentwurf kopieren";
+  }, 1400);
 }
 
 function iconSvg(name) {
@@ -239,6 +265,7 @@ function iconSvg(name) {
     restore: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 3-6"></path><path d="M4 4v6h6"></path><path d="M12 8v5l3 2"></path></svg>',
     trash: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg>',
     copy: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"></path></svg>',
+    check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"></path></svg>',
     help: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.8 9a2.4 2.4 0 0 1 4.6 1.1c0 1.8-2.4 2-2.4 4"></path><path d="M12 18h.01"></path></svg>'
   };
   return icons[name] || "";
@@ -2939,7 +2966,10 @@ function renderEmailDetail(email) {
   const draftTextarea = detailEl.querySelector("#draftText");
   fitDraftTextarea(draftTextarea);
   draftTextarea?.addEventListener("input", () => fitDraftTextarea(draftTextarea));
-  detailEl.querySelector("#copyDraftButton")?.addEventListener("click", () => copyTextToClipboard(draftTextarea?.value || ""));
+  detailEl.querySelector("#copyDraftButton")?.addEventListener("click", async (event) => {
+    const copied = await copyTextToClipboard(draftTextarea?.value || "", draftTextarea);
+    if (copied) showCopySuccess(event.currentTarget);
+  });
   detailEl.querySelector("#bookingCalendarUrl")?.addEventListener("input", () => {
     const checkbox = detailEl.querySelector("#useBookingCalendar");
     if (checkbox) checkbox.checked = Boolean(detailEl.querySelector("#bookingCalendarUrl")?.value.trim());
