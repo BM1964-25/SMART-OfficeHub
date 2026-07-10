@@ -667,7 +667,7 @@ function normalizeUrlInput(value = "") {
   const markdownMatch = raw.match(/\]\((https?:\/\/[^)\s]+)\)/i);
   const bracketedUrlMatch = raw.match(/\[(https?:\/\/[^\]\s]+)\]/i);
   const plainUrlMatch = raw.match(/https?:\/\/[^\s)\]]+/i);
-  return (markdownMatch?.[1] || bracketedUrlMatch?.[1] || plainUrlMatch?.[0] || raw).trim();
+  return (markdownMatch?.[1] || bracketedUrlMatch?.[1] || plainUrlMatch?.[0] || "").trim();
 }
 
 function normalizeDraftMarkdown(text = "") {

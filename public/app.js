@@ -490,7 +490,7 @@ function normalizeUrlInput(value = "") {
   const markdownMatch = raw.match(/\]\((https?:\/\/[^)\s]+)\)/i);
   const bracketedUrlMatch = raw.match(/\[(https?:\/\/[^\]\s]+)\]/i);
   const plainUrlMatch = raw.match(/https?:\/\/[^\s)\]]+/i);
-  return (markdownMatch?.[1] || bracketedUrlMatch?.[1] || plainUrlMatch?.[0] || raw).trim();
+  return (markdownMatch?.[1] || bracketedUrlMatch?.[1] || plainUrlMatch?.[0] || "").trim();
 }
 
 function selectedBookingCalendarUrl(text = "") {
@@ -549,7 +549,7 @@ function removeBookingCalendarConflicts(text = "") {
   return String(text)
     .replace(/[^.\n]*(?:\[Zeitfenster[^\]]*\]|\[Termin[^\]]*\]|Zeitfenster|Terminvorschläge|zeitliche Verfügbarkeit|Verfügbarkeiten)[^.\n]*\.?/gi, "")
     .replace(/[^.\n]*(?:stehen? ich Ihnen|stehe ich Ihnen|bin ich|wäre ich)[^.\n]*(?:zur Verfügung|verfügbar)[^.\n]*:?\s*/gi, "")
-    .replace(/\s+\n/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .replace(/[ \t]{2,}/g, " ")
     .trim();
