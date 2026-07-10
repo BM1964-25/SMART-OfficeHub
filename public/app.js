@@ -503,6 +503,18 @@ function toVisibleDraftText(text = "") {
   return String(text).replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, "$1");
 }
 
+function normalizeDraftMarkdown(text = "") {
+  return String(text)
+    .replace(
+      /\[Buchungskalender\]\(\[(https?:\/\/[^\]\s]+)\]\(https?:\/\/[^)\s]+\)\)/gi,
+      "[Buchungskalender]($1)"
+    )
+    .replace(
+      /\[Buchungskalender\]\(\[?((?:https?:\/\/)[^\]\s)]+)\]?\)/gi,
+      "[Buchungskalender]($1)"
+    );
+}
+
 function insertBeforeClosingGreeting(text = "", sentence = "") {
   const trimmed = String(text).trim();
   if (!trimmed) return sentence;
@@ -534,7 +546,7 @@ function applyBookingCalendarSentence(text = "") {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
-  return insertBeforeClosingGreeting(withoutExistingBookingSentence, bookingCalendarMarkdownSentence(url));
+  return normalizeDraftMarkdown(insertBeforeClosingGreeting(withoutExistingBookingSentence, bookingCalendarMarkdownSentence(url)));
 }
 
 async function runKiDraft(email, { automatic = false } = {}) {
@@ -2840,7 +2852,7 @@ function renderEmailDetail(email) {
   const existingDraftId = draftIdForEmail(email);
   const originalText = email.bodyText || email.snippet || "Kein Mailtext verfügbar.";
   const cachedKiDraft = autoKiDraftsByEmail.get(email.id) || "";
-  const draftText = cachedKiDraft || defaultReply(email);
+  const draftText = normalizeDraftMarkdown(cachedKiDraft || defaultReply(email));
   const draftSource = cachedKiDraft ? "KI-Entwurf" : "Startentwurf";
   const draftSourceState = cachedKiDraft ? "success" : "fallback";
   const gmailDraftsUrl = email.gmailDraftsUrl || "https://mail.google.com/mail/#drafts";
