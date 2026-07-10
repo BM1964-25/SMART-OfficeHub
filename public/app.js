@@ -485,6 +485,7 @@ function collectDraftInstructions() {
 }
 
 function normalizeUrlInput(value = "") {
+  if (value == null) return "";
   const raw = String(value).trim();
   const markdownMatch = raw.match(/\]\((https?:\/\/[^)\s]+)\)/i);
   const bracketedUrlMatch = raw.match(/\[(https?:\/\/[^\]\s]+)\]/i);
@@ -494,25 +495,42 @@ function normalizeUrlInput(value = "") {
 
 function selectedBookingCalendarUrl(text = "") {
   const bookingEnabled = detailEl.querySelector("#useBookingCalendar")?.checked;
-  const url = normalizeUrlInput(detailEl.querySelector("#bookingCalendarUrl")?.value);
+  const inputUrl = normalizeUrlInput(detailEl.querySelector("#bookingCalendarUrl")?.value);
+  const textUrl = String(text).match(/https?:\/\/[^\s)\]]+/i)?.[0] || "";
+  const url = inputUrl || textUrl || bookingCalendarUrl;
   const textMentionsBooking = /Buchungskalender|Booking-Kalender|Buchungskreis/i.test(text);
   return (bookingEnabled || textMentionsBooking) && url ? url : "";
 }
 
 function toVisibleDraftText(text = "") {
-  return String(text).replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, "$1");
+  return normalizeDraftMarkdown(text).replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, "$1");
 }
 
 function normalizeDraftMarkdown(text = "") {
+  let normalized = String(text);
+  for (let index = 0; index < 3; index += 1) {
+    normalized = normalized
+      .replace(
+        /\[([^\]\n]+)\]\(\[(https?:\/\/[^\]\s]+)\]\(https?:\/\/[^)\s]+\)\)/gi,
+        "[$1]($2)"
+      )
+      .replace(
+        /\[([^\]\n]+)\]\(\[?(https?:\/\/[^\]\s)]+)\]?\)/gi,
+        "[$1]($2)"
+      );
+  }
+  return normalized;
+}
+
+function formatDraftParagraphs(text = "") {
   return String(text)
-    .replace(
-      /\[Buchungskalender\]\(\[(https?:\/\/[^\]\s]+)\]\(https?:\/\/[^)\s]+\)\)/gi,
-      "[Buchungskalender]($1)"
-    )
-    .replace(
-      /\[Buchungskalender\]\(\[?((?:https?:\/\/)[^\]\s)]+)\]?\)/gi,
-      "[Buchungskalender]($1)"
-    );
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/^(Sehr geehrte[^\n]+,|Sehr geehrter[^\n]+,|Guten Tag[^\n]+,)\n(?!\n)/i, "$1\n\n")
+    .replace(/\n(?=Zur Terminvereinbarung nutzen Sie bitte direkt meinen \[?Buchungskalender)/i, "\n\n")
+    .replace(/\n(?=(?:Mit freundlichen Grüßen|Freundliche Grüße|Beste Grüße|Viele Grüße)\b)/i, "\n\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 function insertBeforeClosingGreeting(text = "", sentence = "") {
@@ -539,14 +557,20 @@ function removeBookingCalendarConflicts(text = "") {
 
 function applyBookingCalendarSentence(text = "") {
   const url = selectedBookingCalendarUrl();
-  if (!url) return toVisibleDraftText(text);
+  if (!url) return formatDraftParagraphs(normalizeDraftMarkdown(text));
 
   const withoutExistingBookingSentence = removeBookingCalendarConflicts(toVisibleDraftText(text))
     .replace(/[^.\n]*(?:Buchungskalender|Booking-Kalender|Buchungskreis|booking\.builtsmart-ai\.app)[^.\n]*\.?/gi, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
-  return normalizeDraftMarkdown(insertBeforeClosingGreeting(withoutExistingBookingSentence, bookingCalendarMarkdownSentence(url)));
+  return formatDraftParagraphs(
+    normalizeDraftMarkdown(insertBeforeClosingGreeting(withoutExistingBookingSentence, bookingCalendarMarkdownSentence(url)))
+  );
+}
+
+function prepareDraftText(text = "") {
+  return formatDraftParagraphs(applyBookingCalendarSentence(normalizeDraftMarkdown(text)));
 }
 
 async function runKiDraft(email, { automatic = false } = {}) {
@@ -575,7 +599,7 @@ async function runKiDraft(email, { automatic = false } = {}) {
 
   try {
     const result = await generateKiReply(email, tone, textarea.value, replyInstructions);
-    const visibleReply = applyBookingCalendarSentence(result.reply);
+    const visibleReply = prepareDraftText(result.reply);
     textarea.value = visibleReply;
     fitDraftTextarea(textarea);
     textarea.dataset.kiBusy = "";
@@ -2684,7 +2708,12 @@ async function createDraft(email) {
     showNotice("Für Smart-Booking-Terminmails werden keine Antwortentwürfe erstellt.");
     return;
   }
-  const text = detailEl.querySelector("#draftText").value;
+  const textarea = detailEl.querySelector("#draftText");
+  const text = prepareDraftText(textarea?.value || "");
+  if (textarea) {
+    textarea.value = text;
+    fitDraftTextarea(textarea);
+  }
   const subject = email.subject.toLowerCase().startsWith("re:") ? email.subject : `Re: ${email.subject}`;
   const existingDraftId = draftIdForEmail(email);
   if (hasCreatedDraft(email) && !existingDraftId && !confirm("Für diese Mail wurde bereits ein Entwurf erkannt, aber keine Draft-ID ist verfügbar. Einen neuen Entwurf erstellen?")) {
@@ -2852,7 +2881,7 @@ function renderEmailDetail(email) {
   const existingDraftId = draftIdForEmail(email);
   const originalText = email.bodyText || email.snippet || "Kein Mailtext verfügbar.";
   const cachedKiDraft = autoKiDraftsByEmail.get(email.id) || "";
-  const draftText = normalizeDraftMarkdown(cachedKiDraft || defaultReply(email));
+  const draftText = prepareDraftText(cachedKiDraft || defaultReply(email));
   const draftSource = cachedKiDraft ? "KI-Entwurf" : "Startentwurf";
   const draftSourceState = cachedKiDraft ? "success" : "fallback";
   const gmailDraftsUrl = email.gmailDraftsUrl || "https://mail.google.com/mail/#drafts";
@@ -2990,6 +3019,10 @@ function renderEmailDetail(email) {
   fitDraftTextarea(draftTextarea);
   draftTextarea?.addEventListener("input", () => fitDraftTextarea(draftTextarea));
   detailEl.querySelector("#copyDraftButton")?.addEventListener("click", async (event) => {
+    if (draftTextarea) {
+      draftTextarea.value = prepareDraftText(draftTextarea.value);
+      fitDraftTextarea(draftTextarea);
+    }
     const copied = await copyTextToClipboard(draftTextarea?.value || "", draftTextarea);
     if (copied) showCopySuccess(event.currentTarget);
   });

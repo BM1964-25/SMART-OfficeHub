@@ -662,6 +662,7 @@ function escapeHtml(value = "") {
 }
 
 function normalizeUrlInput(value = "") {
+  if (value == null) return "";
   const raw = String(value).trim();
   const markdownMatch = raw.match(/\]\((https?:\/\/[^)\s]+)\)/i);
   const bracketedUrlMatch = raw.match(/\[(https?:\/\/[^\]\s]+)\]/i);
