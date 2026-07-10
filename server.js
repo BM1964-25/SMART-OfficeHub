@@ -669,7 +669,10 @@ function textToDraftHtml(text = "", bookingCalendarUrl = "") {
 
   if (/^https?:\/\//i.test(bookingCalendarUrl) && !html.includes("<a ")) {
     const safeUrl = escapeHtml(bookingCalendarUrl);
-    html = html.replace(/\bBuchungskalender\b/, `<a href="${safeUrl}">Buchungskalender</a>`);
+    html = html.replace(
+      /\b(Buchungskalender|Booking-Kalender|Buchungskreis)\b/,
+      `<a href="${safeUrl}">$1</a>`
+    );
   }
 
   return html;
