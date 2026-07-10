@@ -2248,6 +2248,7 @@ body[data-workspace="ki"] .workspaceGuide {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  margin-top: 4px;
 }
 
 .dayRateInputRow input {
@@ -2259,6 +2260,12 @@ body[data-workspace="ki"] .workspaceGuide {
   color: var(--ink);
   font-size: 13px;
   font-weight: 650;
+}
+
+.dayRateInputRow span {
+  display: inline;
+  margin-top: 0;
+  white-space: nowrap;
 }
 
 .draftInstructionsField textarea {
@@ -2300,6 +2307,17 @@ body[data-workspace="ki"] .workspaceGuide {
 
 .draftAiActionRow .button {
   min-width: 190px;
+}
+
+#improveDraftButton {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+
+#improveDraftButton:hover {
+  border-color: #174a9a;
+  background: #174a9a;
 }
 
 .empty {
