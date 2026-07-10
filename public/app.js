@@ -2783,11 +2783,10 @@ function renderEmailDetail(email) {
           </label>
         </div>
         <div class="draftPresetGrid" aria-label="KI-Vorgaben">
-          <label class="draftPresetOption">
+          <label class="draftPresetOption bookingPresetOption">
             <input type="checkbox" id="useBookingCalendar">
             <span>
               <strong>Booking-Kalender einfügen</strong>
-              <span>Das Wort „Buchungskalender“ wird als Link verwendet.</span>
               <span class="bookingUrlRow">
                 <input id="bookingCalendarUrl" type="url" value="${escapeHtml(bookingCalendarUrl)}" aria-label="Booking-Kalender URL">
                 <button class="iconMiniButton" type="button" id="clearBookingUrlButton" aria-label="Booking-Kalender URL löschen" title="URL löschen">${iconSvg("trash")}</button>

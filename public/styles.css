@@ -2225,6 +2225,10 @@ body[data-workspace="ki"] .workspaceGuide {
   color: var(--ink);
 }
 
+.draftPresetOption.bookingPresetOption {
+  grid-column: 1 / -1;
+}
+
 .draftPresetOption.compactPreset {
   min-height: 70px;
 }
@@ -2259,7 +2263,7 @@ body[data-workspace="ki"] .workspaceGuide {
   grid-template-columns: minmax(0, 1fr) 36px;
   gap: 8px;
   align-items: center;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .bookingUrlRow input {
@@ -2314,8 +2318,8 @@ body[data-workspace="ki"] .workspaceGuide {
 }
 
 .dayRateUnit {
-  display: inline;
-  margin-top: 0;
+  display: inline !important;
+  margin-top: 0 !important;
   margin-left: 8px;
   white-space: nowrap;
 }
