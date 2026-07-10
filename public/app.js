@@ -3036,7 +3036,15 @@ function renderEmailDetail(email) {
   detailEl.querySelector("#draftButton")?.addEventListener("click", () => createDraft(email));
   const draftTextarea = detailEl.querySelector("#draftText");
   fitDraftTextarea(draftTextarea);
-  draftTextarea?.addEventListener("input", () => fitDraftTextarea(draftTextarea));
+  draftTextarea?.addEventListener("input", () => {
+    const preparedText = prepareDraftText(draftTextarea.value);
+    if (preparedText !== draftTextarea.value) {
+      const cursorPosition = draftTextarea.selectionStart || preparedText.length;
+      draftTextarea.value = preparedText;
+      draftTextarea.setSelectionRange(Math.min(cursorPosition, preparedText.length), Math.min(cursorPosition, preparedText.length));
+    }
+    fitDraftTextarea(draftTextarea);
+  });
   detailEl.querySelector("#copyDraftButton")?.addEventListener("click", async (event) => {
     if (draftTextarea) {
       draftTextarea.value = prepareDraftText(draftTextarea.value);
