@@ -200,22 +200,78 @@ function hideNotice() {
   noticeEl.textContent = "";
 }
 
+function draftTextToClipboardHtml(text = "") {
+  const normalized = normalizeDraftMarkdown(text);
+  return escapeHtml(normalized)
+    .replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2">$1</a>')
+    .replace(/\r?\n/g, "<br>");
+}
+
+function copyHtmlWithSelection(html = "") {
+  const container = document.createElement("div");
+  container.setAttribute("contenteditable", "true");
+  container.style.position = "fixed";
+  container.style.left = "-9999px";
+  container.style.top = "0";
+  container.style.opacity = "0";
+  container.innerHTML = html;
+  document.body.appendChild(container);
+
+  const selection = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(container);
+  selection.removeAllRanges();
+  selection.addRange(range);
+
+  const copied = document.execCommand("copy");
+  selection.removeAllRanges();
+  container.remove();
+  return copied;
+}
+
 async function copyTextToClipboard(text, sourceElement = null) {
   if (!text.trim()) {
     showNotice("Der Antwortentwurf ist leer.", "error");
     return false;
   }
+  const html = draftTextToClipboardHtml(text);
   try {
-    if (navigator.clipboard?.writeText && window.isSecureContext) {
+    let copied = false;
+
+    if (navigator.clipboard?.write && window.ClipboardItem && window.isSecureContext) {
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/plain": new Blob([text], { type: "text/plain" }),
+            "text/html": new Blob([html], { type: "text/html" }),
+          }),
+        ]);
+        copied = true;
+      } catch (error) {
+        copied = false;
+      }
+    }
+
+    if (!copied) {
+      copied = copyHtmlWithSelection(html);
+    }
+
+    if (!copied && navigator.clipboard?.writeText && window.isSecureContext) {
       await navigator.clipboard.writeText(text);
-    } else if (sourceElement) {
+      copied = true;
+    }
+
+    if (!copied && sourceElement) {
       sourceElement.focus();
       sourceElement.select();
       sourceElement.setSelectionRange(0, sourceElement.value.length);
       if (!document.execCommand("copy")) {
         throw new Error("execCommand copy failed");
       }
-    } else {
+      copied = true;
+    }
+
+    if (!copied) {
       const temp = document.createElement("textarea");
       temp.value = text;
       temp.setAttribute("readonly", "");
