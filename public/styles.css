@@ -2150,7 +2150,7 @@ body[data-workspace="ki"] .workspaceGuide {
 
 .draftToolsHeader {
   display: grid;
-  grid-template-columns: minmax(250px, 320px) max-content;
+  grid-template-columns: minmax(250px, 320px);
   gap: 10px;
   align-items: center;
 }
@@ -2198,6 +2198,10 @@ body[data-workspace="ki"] .workspaceGuide {
   padding: 12px;
   background: #fff;
   color: var(--ink);
+}
+
+.draftPresetOption.compactPreset {
+  min-height: 70px;
 }
 
 .draftPresetOption input[type="checkbox"] {
@@ -2265,22 +2269,23 @@ body[data-workspace="ki"] .workspaceGuide {
   align-self: center;
 }
 
-#addBookingInstructionButton {
-  border-color: #b8d5df;
-  background: #fff;
-  color: #1f5b6a;
-}
-
-#addBookingInstructionButton:hover {
-  border-color: #2f7d92;
-  background: #eef8fb;
-}
-
 .draftToneHint {
-  grid-column: 1 / -1;
   color: var(--muted);
   font-size: 12px;
   font-weight: 750;
+}
+
+.draftAiActionRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.draftAiActionRow .button {
+  min-width: 190px;
 }
 
 .empty {
@@ -2469,6 +2474,14 @@ body[data-workspace="ki"] .workspaceGuide {
 
   .draftPresetGrid {
     grid-template-columns: 1fr;
+  }
+
+  .draftAiActionRow {
+    align-items: stretch;
+  }
+
+  .draftAiActionRow .button {
+    width: 100%;
   }
 
   .draftTools label {

@@ -393,6 +393,8 @@ function collectDraftInstructions() {
   const instructions = [];
   const bookingEnabled = detailEl.querySelector("#useBookingCalendar")?.checked;
   const dayRateEnabled = detailEl.querySelector("#useDayRate")?.checked;
+  const requestDocuments = detailEl.querySelector("#requestDocuments")?.checked;
+  const hidePrices = detailEl.querySelector("#hidePrices")?.checked;
   const dayRateInput = detailEl.querySelector("#dayRateAmount");
   const manualInstructions = detailEl.querySelector("#draftInstructions")?.value.trim();
 
@@ -405,6 +407,8 @@ function collectDraftInstructions() {
     }
     instructions.push(`Bitte Abrechnung nach Tagessatz berücksichtigen. Tagessatz: ${dayRate} EUR netto.`);
   }
+  if (requestDocuments) instructions.push("Bitte freundlich darum bitten, relevante Unterlagen oder konkrete Punkte vorab zu senden.");
+  if (hidePrices) instructions.push("Bitte keine Preise, Tagessätze oder Konditionen im Antwortentwurf nennen.");
   if (manualInstructions) instructions.push(manualInstructions);
 
   return instructions.join("\n");
@@ -2737,14 +2741,13 @@ function renderEmailDetail(email) {
               <option value="verbindlich">verbindlich</option>
             </select>
           </label>
-          <button class="button secondary" type="button" id="improveDraftButton">Mit KI neu formulieren</button>
         </div>
         <div class="draftPresetGrid" aria-label="KI-Vorgaben">
           <label class="draftPresetOption">
             <input type="checkbox" id="useBookingCalendar">
             <span>
               <strong>Booking-Kalender einfügen</strong>
-              <a href="${escapeHtml(bookingCalendarUrl)}" target="_blank" rel="noreferrer">${escapeHtml(bookingCalendarUrl)}</a>
+              <a href="${escapeHtml(bookingCalendarUrl)}" target="_blank" rel="noreferrer">Booking-Kalender öffnen</a>
             </span>
           </label>
           <label class="draftPresetOption dayRateOption">
@@ -2757,12 +2760,29 @@ function renderEmailDetail(email) {
               </span>
             </span>
           </label>
+          <label class="draftPresetOption compactPreset">
+            <input type="checkbox" id="requestDocuments">
+            <span>
+              <strong>Unterlagen vorab anfordern</strong>
+              <span>Relevante Informationen oder Gesprächspunkte vorab erbitten.</span>
+            </span>
+          </label>
+          <label class="draftPresetOption compactPreset">
+            <input type="checkbox" id="hidePrices">
+            <span>
+              <strong>Keine Preise nennen</strong>
+              <span>Preise und Konditionen bewusst aus dem Entwurf heraushalten.</span>
+            </span>
+          </label>
         </div>
         <label class="draftInstructionsField">
           <span>Weitere Besonderheiten</span>
           <textarea id="draftInstructions" rows="3" placeholder="Optional: z. B. Verfügbarkeit ab 15.08., keine Preise nennen, nur grundsätzliches Interesse bestätigen"></textarea>
         </label>
-        <span class="draftToneHint">${anthropicApiKey ? "Tonalität und Besonderheiten werden beim nächsten KI-Lauf angewendet." : "Ohne KI-Schlüssel wird der Startentwurf als Fallback angezeigt."}</span>
+        <div class="draftAiActionRow">
+          <span class="draftToneHint">${anthropicApiKey ? "Tonalität und Besonderheiten werden beim nächsten KI-Lauf angewendet." : "Ohne KI-Schlüssel wird der Startentwurf als Fallback angezeigt."}</span>
+          <button class="button secondary" type="button" id="improveDraftButton">Mit KI neu formulieren</button>
+        </div>
       </div>
       <div class="actions">
         <button class="button secondary" type="button" id="draftButton">${existingDraftId ? "Entwurf in Gmail aktualisieren" : "Als Entwurf in Gmail übertragen"}</button>
