@@ -661,14 +661,27 @@ function escapeHtml(value = "") {
     .replace(/"/g, "&quot;");
 }
 
+function normalizeUrlInput(value = "") {
+  const raw = String(value).trim();
+  const markdownMatch = raw.match(/\]\((https?:\/\/[^)\s]+)\)/i);
+  const bracketedUrlMatch = raw.match(/\[(https?:\/\/[^\]\s]+)\]/i);
+  const plainUrlMatch = raw.match(/https?:\/\/[^\s)\]]+/i);
+  return (markdownMatch?.[1] || bracketedUrlMatch?.[1] || plainUrlMatch?.[0] || raw).trim();
+}
+
 function textToDraftHtml(text = "", bookingCalendarUrl = "") {
-  const escaped = escapeHtml(text);
+  const cleanBookingCalendarUrl = normalizeUrlInput(bookingCalendarUrl);
+  const cleanedText = String(text).replace(
+    /\[Buchungskalender\]\(\[(https?:\/\/[^\]\s]+)\]\(https?:\/\/[^)\s]+\)\)/gi,
+    "[Buchungskalender]($1)"
+  );
+  const escaped = escapeHtml(cleanedText);
   let html = escaped
     .replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2">$1</a>')
     .replace(/\r?\n/g, "<br>");
 
-  if (/^https?:\/\//i.test(bookingCalendarUrl)) {
-    const safeUrl = escapeHtml(bookingCalendarUrl);
+  if (/^https?:\/\//i.test(cleanBookingCalendarUrl)) {
+    const safeUrl = escapeHtml(cleanBookingCalendarUrl);
     if (!html.includes(safeUrl)) {
       html = html.replace(
         /(Buchungskalender|Booking-Kalender|Buchungskreis)/,

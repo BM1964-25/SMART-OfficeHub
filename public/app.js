@@ -484,9 +484,17 @@ function collectDraftInstructions() {
   return instructions.join("\n");
 }
 
+function normalizeUrlInput(value = "") {
+  const raw = String(value).trim();
+  const markdownMatch = raw.match(/\]\((https?:\/\/[^)\s]+)\)/i);
+  const bracketedUrlMatch = raw.match(/\[(https?:\/\/[^\]\s]+)\]/i);
+  const plainUrlMatch = raw.match(/https?:\/\/[^\s)\]]+/i);
+  return (markdownMatch?.[1] || bracketedUrlMatch?.[1] || plainUrlMatch?.[0] || raw).trim();
+}
+
 function selectedBookingCalendarUrl(text = "") {
   const bookingEnabled = detailEl.querySelector("#useBookingCalendar")?.checked;
-  const url = detailEl.querySelector("#bookingCalendarUrl")?.value.trim();
+  const url = normalizeUrlInput(detailEl.querySelector("#bookingCalendarUrl")?.value);
   const textMentionsBooking = /Buchungskalender|Booking-Kalender|Buchungskreis/i.test(text);
   return (bookingEnabled || textMentionsBooking) && url ? url : "";
 }
