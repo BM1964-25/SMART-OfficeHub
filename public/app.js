@@ -564,6 +564,17 @@ function removeBookingCalendarParagraphs(text = "") {
     .trim();
 }
 
+function forceCleanBookingCalendarMarkdown(text = "") {
+  const url = selectedBookingCalendarUrl(text);
+  if (!url) return normalizeDraftMarkdown(text);
+
+  return normalizeDraftMarkdown(text)
+    .replace(
+      /\[Buchungskalender\]\([^\n]*?\)/gi,
+      `[Buchungskalender](${url})`
+    );
+}
+
 function applyBookingCalendarSentence(text = "") {
   const url = selectedBookingCalendarUrl(text);
   if (!url) return formatDraftParagraphs(normalizeDraftMarkdown(text));
@@ -578,7 +589,7 @@ function applyBookingCalendarSentence(text = "") {
 }
 
 function prepareDraftText(text = "") {
-  return formatDraftParagraphs(applyBookingCalendarSentence(normalizeDraftMarkdown(text)));
+  return formatDraftParagraphs(forceCleanBookingCalendarMarkdown(applyBookingCalendarSentence(normalizeDraftMarkdown(text))));
 }
 
 async function runKiDraft(email, { automatic = false } = {}) {
