@@ -2347,6 +2347,10 @@ body[data-workspace="ki"] .workspaceGuide {
 }
 
 .draftAiActionRow .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   min-width: 190px;
 }
 
@@ -2359,6 +2363,26 @@ body[data-workspace="ki"] .workspaceGuide {
 #improveDraftButton:hover {
   border-color: #174a9a;
   background: #174a9a;
+}
+
+.buttonSpinner {
+  display: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.42);
+  border-top-color: #fff;
+  border-radius: 999px;
+  animation: spin 0.8s linear infinite;
+}
+
+#improveDraftButton.isLoading .buttonSpinner {
+  display: inline-block;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .empty {

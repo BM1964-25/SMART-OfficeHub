@@ -461,10 +461,12 @@ async function runKiDraft(email, { automatic = false } = {}) {
     showNotice(error.message || "Bitte die KI-Vorgaben prüfen.", "error");
     return;
   }
-  const previousButtonLabel = button?.textContent || "Mit KI neu formulieren";
+  const buttonLabel = button?.querySelector(".buttonLabel");
+  const previousButtonLabel = buttonLabel?.textContent || "Mit KI neu formulieren";
   if (button) {
     button.disabled = true;
-    button.textContent = automatic ? "KI erstellt ..." : "KI formuliert ...";
+    button.classList.add("isLoading");
+    if (buttonLabel) buttonLabel.textContent = automatic ? "KI erstellt ..." : "KI formuliert ...";
   }
   textarea.dataset.kiBusy = "true";
   setDraftSourceLabel("KI-Entwurf wird erstellt ...", "loading");
@@ -490,7 +492,8 @@ async function runKiDraft(email, { automatic = false } = {}) {
   } finally {
     if (button) {
       button.disabled = false;
-      button.textContent = previousButtonLabel;
+      button.classList.remove("isLoading");
+      if (buttonLabel) buttonLabel.textContent = previousButtonLabel;
     }
   }
 }
@@ -2820,7 +2823,7 @@ function renderEmailDetail(email) {
         </label>
         <div class="draftAiActionRow">
           <span class="draftToneHint">${anthropicApiKey ? "Tonalität und Besonderheiten werden beim nächsten KI-Lauf angewendet." : "Ohne KI-Schlüssel wird der Startentwurf als Fallback angezeigt."}</span>
-          <button class="button secondary" type="button" id="improveDraftButton">Mit KI neu formulieren</button>
+          <button class="button secondary" type="button" id="improveDraftButton"><span class="buttonSpinner" aria-hidden="true"></span><span class="buttonLabel">Mit KI neu formulieren</span></button>
         </div>
       </div>
       <div class="actions">
