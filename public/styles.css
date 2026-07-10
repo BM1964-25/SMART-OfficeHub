@@ -2114,12 +2114,6 @@ body[data-workspace="ki"] .workspaceGuide {
   gap: 8px;
 }
 
-.copyDraftButton {
-  min-height: 32px;
-  padding: 6px 10px;
-  font-size: 12px;
-}
-
 .draftSourceLabel {
   border-radius: 999px;
   padding: 5px 10px;
@@ -2142,13 +2136,50 @@ body[data-workspace="ki"] .workspaceGuide {
   color: #246b32;
 }
 
+.draftTextareaWrap {
+  position: relative;
+}
+
+.draftCopyIconButton {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.draftCopyIconButton:hover {
+  border-color: #9fb4c7;
+  background: #f8fafc;
+  color: var(--blue);
+}
+
+.draftCopyIconButton svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .draftBox textarea {
   min-height: 280px;
   width: 100%;
   resize: vertical;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 18px 20px;
+  padding: 18px 62px 18px 20px;
   background: #fff;
   color: var(--ink);
   font-size: 15px;

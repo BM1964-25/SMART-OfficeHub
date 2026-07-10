@@ -209,7 +209,9 @@ async function copyTextToClipboard(text) {
       temp.style.position = "fixed";
       temp.style.left = "-9999px";
       document.body.appendChild(temp);
+      temp.focus();
       temp.select();
+      temp.setSelectionRange(0, temp.value.length);
       document.execCommand("copy");
       temp.remove();
     }
@@ -231,6 +233,7 @@ function iconSvg(name) {
     save: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5z"></path><path d="M8 4v6h8V4"></path><path d="M8 16h8"></path></svg>',
     restore: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 3-6"></path><path d="M4 4v6h6"></path><path d="M12 8v5l3 2"></path></svg>',
     trash: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg>',
+    copy: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"></path></svg>',
     help: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.8 9a2.4 2.4 0 0 1 4.6 1.1c0 1.8-2.4 2-2.4 4"></path><path d="M12 18h.01"></path></svg>'
   };
   return icons[name] || "";
@@ -2778,10 +2781,12 @@ function renderEmailDetail(email) {
         <label for="draftText"><strong>Antwortentwurf</strong></label>
         <div class="draftHeaderActions">
           <span class="draftSourceLabel ${draftSourceState}" id="draftSourceLabel">${draftSource}</span>
-          <button class="button secondary copyDraftButton" type="button" id="copyDraftButton">Text kopieren</button>
         </div>
       </div>
-      <textarea id="draftText">${escapeHtml(draftText)}</textarea>
+      <div class="draftTextareaWrap">
+        <button class="draftCopyIconButton" type="button" id="copyDraftButton" aria-label="Antwortentwurf kopieren" title="Antwortentwurf kopieren">${iconSvg("copy")}</button>
+        <textarea id="draftText">${escapeHtml(draftText)}</textarea>
+      </div>
       <div class="draftTools">
         <div class="draftToolsHeader">
           <label>
