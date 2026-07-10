@@ -2814,7 +2814,7 @@ function renderEmailDetail(email) {
             <input type="checkbox" id="useDayRate">
             <span>
               <strong>Abrechnung nach Tagessatz</strong>
-              <input class="dayRateAmountInput" id="dayRateAmount" type="number" min="0" step="50" inputmode="decimal" placeholder="z. B. 1250">
+              <input class="dayRateAmountInput" id="dayRateAmount" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 1250">
               <span class="dayRateUnit">EUR netto / Tag</span>
             </span>
           </label>

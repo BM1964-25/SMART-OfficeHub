@@ -2344,6 +2344,12 @@ body[data-workspace="ki"] .workspaceGuide {
   font-weight: 650;
 }
 
+.dayRateAmountInput::-webkit-outer-spin-button,
+.dayRateAmountInput::-webkit-inner-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
 .dayRateUnit {
   display: inline !important;
   margin-top: 0 !important;
