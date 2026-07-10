@@ -338,16 +338,12 @@ body.sidebarCollapsed .sidebarCollapseButton {
 }
 
 .footerLogo {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   flex: 0 0 auto;
-  display: grid;
-  place-items: center;
+  display: block;
   border-radius: 8px;
-  background: var(--teal);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 900;
+  object-fit: contain;
 }
 
 .footerBrand strong {
