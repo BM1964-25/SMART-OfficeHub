@@ -458,6 +458,17 @@ body.modalOpen {
   color: #28541e;
 }
 
+#draftButton {
+  border-color: var(--green);
+  background: var(--green);
+  color: #fff;
+}
+
+#draftButton:hover {
+  border-color: #2f5f20;
+  background: #2f5f20;
+}
+
 .button:disabled,
 .iconActionButton:disabled {
   cursor: wait;
