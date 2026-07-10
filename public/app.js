@@ -99,7 +99,11 @@ const taskGroupDescriptions = {
 };
 const bookingCalendarUrl = "https://booking.builtsmart-ai.app/book/profile/metzger-real-estate-advisory?embed=1";
 const bookingCalendarSentence = "Zur Terminvereinbarung nutzen Sie bitte direkt meinen Buchungskalender und wählen dort einen passenden Termin aus.";
-const bookingCalendarInstruction = () => `Wenn die Booking-Kalender-Option aktiviert ist, füge exakt diesen Satz in den Antwortentwurf ein: „${bookingCalendarSentence}“`;
+const bookingCalendarInstruction = () => [
+  `Wenn die Booking-Kalender-Option aktiviert ist, füge exakt diesen Satz in den Antwortentwurf ein: „${bookingCalendarSentence}“`,
+  "Fordere dann keine Zeitfenster, Terminvorschläge oder separate Verfügbarkeiten an.",
+  "Verwende keine Platzhalter wie [Zeitfenster eintragen]."
+].join(" ");
 const taskPriorityRank = {
   hoch: 3,
   mittel: 2,
@@ -474,10 +478,20 @@ function insertBeforeClosingGreeting(text = "", sentence = "") {
   return `${trimmed}\n\n${sentence}`;
 }
 
+function removeBookingCalendarConflicts(text = "") {
+  return String(text)
+    .replace(/[^.\n]*(?:\[Zeitfenster[^\]]*\]|\[Termin[^\]]*\]|Zeitfenster|Terminvorschläge|zeitliche Verfügbarkeit|Verfügbarkeiten)[^.\n]*\.?/gi, "")
+    .replace(/[^.\n]*(?:stehen? ich Ihnen|stehe ich Ihnen|bin ich|wäre ich)[^.\n]*(?:zur Verfügung|verfügbar)[^.\n]*:?\s*/gi, "")
+    .replace(/\s+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
 function applyBookingCalendarSentence(text = "") {
   if (!selectedBookingCalendarUrl()) return toVisibleDraftText(text);
 
-  const withoutExistingBookingSentence = toVisibleDraftText(text)
+  const withoutExistingBookingSentence = removeBookingCalendarConflicts(toVisibleDraftText(text))
     .replace(/[^.\n]*(?:Buchungskalender|Booking-Kalender|Buchungskreis|booking\.builtsmart-ai\.app)[^.\n]*\.?/gi, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
