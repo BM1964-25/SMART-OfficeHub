@@ -867,11 +867,11 @@ async function generateAnthropicReply(body = {}) {
 
   const prompt = [
     "Erstelle einen hochwertigen deutschen Antwortentwurf für eine geschäftliche E-Mail.",
-    "Schreibe nur den fertigen E-Mail-Text, ohne Analyse, ohne Betreffzeile und ohne Markdown.",
+    "Schreibe nur den fertigen E-Mail-Text, ohne Analyse und ohne Betreffzeile. Verwende Markdown ausschließlich für ausdrücklich angegebene Buchungskalender-Links.",
     "Formatiere den Entwurf als gut lesbare E-Mail mit Absätzen und Leerzeilen: Anrede, kurzer Einstieg, Hauptteil, nächster Schritt, Grußformel.",
     "Vermeide lange Textblöcke. Jeder Absatz soll höchstens zwei Sätze enthalten.",
     "Nutze eine natürliche Sprache. Keine Floskeln wie „Ich beziehe mich auf:“.",
-    "Wenn ein Buchungskalender gewünscht ist, schreibe nur das Wort „Buchungskalender“ in den Text. Keine sichtbare URL und kein Markdown-Link.",
+    "Wenn ein Buchungskalender-Link angegeben ist, verlinke nur das Wort „Buchungskalender“ als Markdown-Link und schreibe die URL nicht zusätzlich sichtbar aus.",
     toneInstruction(tone),
     "Die gewählte Tonalität muss im fertigen Text deutlich erkennbar sein.",
     "Formuliere nicht nur den bisherigen Entwurf um. Schreibe bewusst einen neuen Antworttext, der zur gewählten Tonalität passt.",

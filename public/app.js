@@ -99,6 +99,7 @@ const taskGroupDescriptions = {
 };
 const bookingCalendarUrl = "https://booking.builtsmart-ai.app/book/profile/metzger-real-estate-advisory?embed=1";
 const bookingCalendarSentence = "Zur Terminvereinbarung nutzen Sie bitte direkt meinen Buchungskalender und wählen dort einen passenden Termin aus.";
+const bookingCalendarMarkdownSentence = (url) => `Zur Terminvereinbarung nutzen Sie bitte direkt meinen [Buchungskalender](${url}) und wählen dort einen passenden Termin aus.`;
 const bookingCalendarInstruction = () => [
   `Wenn die Booking-Kalender-Option aktiviert ist, füge exakt diesen Satz in den Antwortentwurf ein: „${bookingCalendarSentence}“`,
   "Fordere dann keine Zeitfenster, Terminvorschläge oder separate Verfügbarkeiten an.",
@@ -517,14 +518,15 @@ function removeBookingCalendarConflicts(text = "") {
 }
 
 function applyBookingCalendarSentence(text = "") {
-  if (!selectedBookingCalendarUrl()) return toVisibleDraftText(text);
+  const url = selectedBookingCalendarUrl();
+  if (!url) return toVisibleDraftText(text);
 
   const withoutExistingBookingSentence = removeBookingCalendarConflicts(toVisibleDraftText(text))
     .replace(/[^.\n]*(?:Buchungskalender|Booking-Kalender|Buchungskreis|booking\.builtsmart-ai\.app)[^.\n]*\.?/gi, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
-  return insertBeforeClosingGreeting(withoutExistingBookingSentence, bookingCalendarSentence);
+  return insertBeforeClosingGreeting(withoutExistingBookingSentence, bookingCalendarMarkdownSentence(url));
 }
 
 async function runKiDraft(email, { automatic = false } = {}) {
