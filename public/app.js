@@ -98,7 +98,7 @@ const taskGroupDescriptions = {
   erledigt: "Abgeschlossene Aufgaben im gewählten Filter."
 };
 const bookingCalendarUrl = "https://booking.builtsmart-ai.app/book/profile/metzger-real-estate-advisory?embed=1";
-const bookingCalendarInstruction = `Bitte auf meinen Booking-Kalender für die Terminbuchung verweisen: ${bookingCalendarUrl}`;
+const bookingCalendarInstruction = (url) => `Zur Terminvereinbarung nutzen Sie bitte direkt meinen [Buchungskalender](${url}). Dort kann ein passender Termin ausgewählt werden.`;
 const taskPriorityRank = {
   hoch: 3,
   mittel: 2,
@@ -230,6 +230,7 @@ function iconSvg(name) {
     panelLeftOpen: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"></path><path d="M9 5v14"></path><path d="m14 10 2 2-2 2"></path></svg>',
     save: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5z"></path><path d="M8 4v6h8V4"></path><path d="M8 16h8"></path></svg>',
     restore: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 3-6"></path><path d="M4 4v6h6"></path><path d="M12 8v5l3 2"></path></svg>',
+    trash: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg>',
     help: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.8 9a2.4 2.4 0 0 1 4.6 1.1c0 1.8-2.4 2-2.4 4"></path><path d="M12 18h.01"></path></svg>'
   };
   return icons[name] || "";
@@ -417,13 +418,21 @@ function setDraftSourceLabel(source = "Startentwurf", state = "fallback") {
 function collectDraftInstructions() {
   const instructions = [];
   const bookingEnabled = detailEl.querySelector("#useBookingCalendar")?.checked;
+  const bookingUrlInput = detailEl.querySelector("#bookingCalendarUrl");
   const dayRateEnabled = detailEl.querySelector("#useDayRate")?.checked;
   const requestDocuments = detailEl.querySelector("#requestDocuments")?.checked;
   const hidePrices = detailEl.querySelector("#hidePrices")?.checked;
   const dayRateInput = detailEl.querySelector("#dayRateAmount");
   const manualInstructions = detailEl.querySelector("#draftInstructions")?.value.trim();
 
-  if (bookingEnabled) instructions.push(bookingCalendarInstruction);
+  if (bookingEnabled) {
+    const url = bookingUrlInput?.value.trim();
+    if (!url) {
+      bookingUrlInput?.focus();
+      throw new Error("Bitte die URL zum Buchungskalender eintragen oder die Booking-Option deaktivieren.");
+    }
+    instructions.push(bookingCalendarInstruction(url));
+  }
   if (dayRateEnabled) {
     const dayRate = dayRateInput?.value.trim();
     if (!dayRate) {
@@ -2775,17 +2784,19 @@ function renderEmailDetail(email) {
             <input type="checkbox" id="useBookingCalendar">
             <span>
               <strong>Booking-Kalender einfügen</strong>
-              <a href="${escapeHtml(bookingCalendarUrl)}" target="_blank" rel="noreferrer">Booking-Kalender öffnen</a>
+              <span>Das Wort „Buchungskalender“ wird als Link verwendet.</span>
+              <span class="bookingUrlRow">
+                <input id="bookingCalendarUrl" type="url" value="${escapeHtml(bookingCalendarUrl)}" aria-label="Booking-Kalender URL">
+                <button class="iconMiniButton" type="button" id="clearBookingUrlButton" aria-label="Booking-Kalender URL löschen" title="URL löschen">${iconSvg("trash")}</button>
+              </span>
             </span>
           </label>
           <label class="draftPresetOption dayRateOption">
             <input type="checkbox" id="useDayRate">
             <span>
               <strong>Abrechnung nach Tagessatz</strong>
-              <span class="dayRateInputRow">
-                <input id="dayRateAmount" type="number" min="0" step="50" inputmode="decimal" placeholder="z. B. 1250">
-                <span>EUR netto / Tag</span>
-              </span>
+              <input class="dayRateAmountInput" id="dayRateAmount" type="number" min="0" step="50" inputmode="decimal" placeholder="z. B. 1250">
+              <span class="dayRateUnit">EUR netto / Tag</span>
             </span>
           </label>
           <label class="draftPresetOption compactPreset">
@@ -2872,6 +2883,17 @@ function renderEmailDetail(email) {
   fitDraftTextarea(draftTextarea);
   draftTextarea?.addEventListener("input", () => fitDraftTextarea(draftTextarea));
   detailEl.querySelector("#copyDraftButton")?.addEventListener("click", () => copyTextToClipboard(draftTextarea?.value || ""));
+  detailEl.querySelector("#bookingCalendarUrl")?.addEventListener("input", () => {
+    const checkbox = detailEl.querySelector("#useBookingCalendar");
+    if (checkbox) checkbox.checked = Boolean(detailEl.querySelector("#bookingCalendarUrl")?.value.trim());
+  });
+  detailEl.querySelector("#clearBookingUrlButton")?.addEventListener("click", () => {
+    const urlInput = detailEl.querySelector("#bookingCalendarUrl");
+    const checkbox = detailEl.querySelector("#useBookingCalendar");
+    if (urlInput) urlInput.value = "";
+    if (checkbox) checkbox.checked = false;
+    urlInput?.focus();
+  });
   detailEl.querySelector("#dayRateAmount")?.addEventListener("input", () => {
     const checkbox = detailEl.querySelector("#useDayRate");
     if (checkbox) checkbox.checked = Boolean(detailEl.querySelector("#dayRateAmount")?.value.trim());

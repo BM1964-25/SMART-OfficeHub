@@ -653,14 +653,30 @@ function base64Url(input) {
     .replace(/=+$/g, "");
 }
 
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function textToDraftHtml(text = "") {
+  const escaped = escapeHtml(text);
+  return escaped
+    .replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2">$1</a>')
+    .replace(/\r?\n/g, "<br>");
+}
+
 function draftMessage(body) {
+  const html = textToDraftHtml(body.text || "");
   const message = [
     `To: ${body.to}`,
     `Subject: ${body.subject}`,
-    "Content-Type: text/plain; charset=utf-8",
+    "Content-Type: text/html; charset=utf-8",
     "MIME-Version: 1.0",
     "",
-    body.text
+    html
   ].join("\r\n");
 
   return {
@@ -839,10 +855,12 @@ async function generateAnthropicReply(body = {}) {
 
   const prompt = [
     "Erstelle einen hochwertigen deutschen Antwortentwurf für eine geschäftliche E-Mail.",
-    "Schreibe nur den fertigen E-Mail-Text, ohne Analyse, ohne Markdown, ohne Betreffzeile.",
+    "Schreibe nur den fertigen E-Mail-Text, ohne Analyse, ohne Betreffzeile. Verwende Markdown nur für ausdrücklich gewünschte Buchungskalender-Links.",
     "Formatiere den Entwurf als gut lesbare E-Mail mit Absätzen und Leerzeilen: Anrede, kurzer Einstieg, Hauptteil, nächster Schritt, Grußformel.",
     "Vermeide lange Textblöcke. Jeder Absatz soll höchstens zwei Sätze enthalten.",
     "Nutze eine natürliche Sprache. Keine Floskeln wie „Ich beziehe mich auf:“.",
+    "Ausnahme für Links: Wenn ausdrücklich ein Buchungskalender-Link angegeben ist, darf der Begriff „Buchungskalender“ als Markdown-Link im Format [Buchungskalender](URL) ausgegeben werden.",
+    "Schreibe die Buchungskalender-URL nicht sichtbar als Klartext aus, wenn ein Markdown-Link möglich ist.",
     toneInstruction(tone),
     "Die gewählte Tonalität muss im fertigen Text deutlich erkennbar sein.",
     "Formuliere nicht nur den bisherigen Entwurf um. Schreibe bewusst einen neuen Antworttext, der zur gewählten Tonalität passt.",

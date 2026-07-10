@@ -2243,17 +2243,57 @@ body[data-workspace="ki"] .workspaceGuide {
   overflow-wrap: anywhere;
 }
 
-.dayRateInputRow {
-  display: flex;
-  flex-wrap: wrap;
+.bookingUrlRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
   gap: 8px;
   align-items: center;
-  margin-top: 4px;
+  margin-top: 8px;
 }
 
-.dayRateInputRow input {
+.bookingUrlRow input {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 7px 9px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.iconMiniButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  min-height: 36px;
+  border: 1px solid #d7a2a2;
+  border-radius: 7px;
+  background: #fff7f7;
+  color: #8e2525;
+  cursor: pointer;
+}
+
+.iconMiniButton svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.iconMiniButton:hover {
+  background: #ffecec;
+  border-color: #c97979;
+}
+
+.dayRateAmountInput {
+  display: inline-block;
   width: 130px;
   min-height: 36px;
+  margin-top: 6px;
   border: 1px solid var(--line);
   border-radius: 7px;
   padding: 7px 9px;
@@ -2262,9 +2302,10 @@ body[data-workspace="ki"] .workspaceGuide {
   font-weight: 650;
 }
 
-.dayRateInputRow span {
+.dayRateUnit {
   display: inline;
   margin-top: 0;
+  margin-left: 8px;
   white-space: nowrap;
 }
 
