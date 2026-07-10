@@ -98,7 +98,8 @@ const taskGroupDescriptions = {
   erledigt: "Abgeschlossene Aufgaben im gewählten Filter."
 };
 const bookingCalendarUrl = "https://booking.builtsmart-ai.app/book/profile/metzger-real-estate-advisory?embed=1";
-const bookingCalendarInstruction = () => "Zur Terminvereinbarung nutzen Sie bitte direkt meinen Buchungskalender. Dort kann ein passender Termin ausgewählt werden.";
+const bookingCalendarSentence = "Zur Terminvereinbarung nutzen Sie bitte direkt meinen Buchungskalender und wählen dort einen passenden Termin aus.";
+const bookingCalendarInstruction = () => `Wenn die Booking-Kalender-Option aktiviert ist, füge exakt diesen Satz in den Antwortentwurf ein: „${bookingCalendarSentence}“`;
 const taskPriorityRank = {
   hoch: 3,
   mittel: 2,
@@ -461,6 +462,29 @@ function toVisibleDraftText(text = "") {
   return String(text).replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, "$1");
 }
 
+function insertBeforeClosingGreeting(text = "", sentence = "") {
+  const trimmed = String(text).trim();
+  if (!trimmed) return sentence;
+
+  const closingIndex = trimmed.search(/\n(?=(?:Mit freundlichen Grüßen|Freundliche Grüße|Beste Grüße|Viele Grüße)\b)/i);
+  if (closingIndex >= 0) {
+    return `${trimmed.slice(0, closingIndex).trimEnd()}\n\n${sentence}\n${trimmed.slice(closingIndex)}`;
+  }
+
+  return `${trimmed}\n\n${sentence}`;
+}
+
+function applyBookingCalendarSentence(text = "") {
+  if (!selectedBookingCalendarUrl()) return toVisibleDraftText(text);
+
+  const withoutExistingBookingSentence = toVisibleDraftText(text)
+    .replace(/[^.\n]*(?:Buchungskalender|Booking-Kalender|Buchungskreis|booking\.builtsmart-ai\.app)[^.\n]*\.?/gi, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return insertBeforeClosingGreeting(withoutExistingBookingSentence, bookingCalendarSentence);
+}
+
 async function runKiDraft(email, { automatic = false } = {}) {
   const textarea = detailEl.querySelector("#draftText");
   const button = detailEl.querySelector("#improveDraftButton");
@@ -487,7 +511,7 @@ async function runKiDraft(email, { automatic = false } = {}) {
 
   try {
     const result = await generateKiReply(email, tone, textarea.value, replyInstructions);
-    const visibleReply = toVisibleDraftText(result.reply);
+    const visibleReply = applyBookingCalendarSentence(result.reply);
     textarea.value = visibleReply;
     fitDraftTextarea(textarea);
     textarea.dataset.kiBusy = "";
