@@ -2140,21 +2140,24 @@ body[data-workspace="ki"] .workspaceGuide {
 
 .draftTools {
   display: grid;
-  grid-template-columns: max-content max-content;
-  gap: 10px 14px;
-  align-items: center;
-  justify-content: start;
-  padding: 12px;
+  gap: 12px;
+  align-items: stretch;
+  padding: 14px;
   border: 1px solid #c5dedd;
   border-radius: 8px;
   background: #f2fbfa;
 }
 
-.draftTools label {
+.draftToolsHeader {
   display: grid;
-  grid-template-columns: auto 180px;
+  grid-template-columns: minmax(250px, 320px) max-content max-content;
   gap: 10px;
   align-items: center;
+}
+
+.draftTools label {
+  display: grid;
+  gap: 6px;
   min-width: 0;
   color: var(--muted);
   font-size: 13px;
@@ -2163,7 +2166,7 @@ body[data-workspace="ki"] .workspaceGuide {
 
 .draftTools select {
   height: 42px;
-  width: 180px;
+  width: 100%;
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -2175,10 +2178,7 @@ body[data-workspace="ki"] .workspaceGuide {
 }
 
 .draftTools .draftInstructionsField {
-  grid-column: 1 / -1;
-  grid-template-columns: 112px minmax(260px, 1fr);
-  align-items: start;
-  width: min(720px, 100%);
+  width: 100%;
 }
 
 .draftInstructionsField textarea {
@@ -2201,6 +2201,17 @@ body[data-workspace="ki"] .workspaceGuide {
   white-space: nowrap;
   min-height: 42px;
   align-self: center;
+}
+
+#addBookingInstructionButton {
+  border-color: #b8d5df;
+  background: #fff;
+  color: #1f5b6a;
+}
+
+#addBookingInstructionButton:hover {
+  border-color: #2f7d92;
+  background: #eef8fb;
 }
 
 .draftToneHint {
@@ -2388,6 +2399,10 @@ body[data-workspace="ki"] .workspaceGuide {
   .draftTools {
     grid-template-columns: 1fr;
     align-items: stretch;
+  }
+
+  .draftToolsHeader {
+    grid-template-columns: 1fr;
   }
 
   .draftTools label {

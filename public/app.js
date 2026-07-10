@@ -97,6 +97,7 @@ const taskGroupDescriptions = {
   offen: "Offene Aufgaben ohne direkte Fälligkeit.",
   erledigt: "Abgeschlossene Aufgaben im gewählten Filter."
 };
+const bookingCalendarInstruction = "Bitte auf meinen Booking-Kalender für die Terminbuchung verweisen: https://booking.builtsmart-ai.app/book/profile/metzger-real-estate-advisoryembed=1";
 const taskPriorityRank = {
   hoch: 3,
   mittel: 2,
@@ -426,6 +427,20 @@ async function runKiDraft(email, { automatic = false } = {}) {
       button.textContent = previousButtonLabel;
     }
   }
+}
+
+function addBookingInstructionToDraft() {
+  const field = detailEl.querySelector("#draftInstructions");
+  if (!field) return;
+  const current = field.value.trim();
+  if (current.includes(bookingCalendarInstruction)) {
+    showNotice("Der Booking-Kalender ist bereits in den Besonderheiten enthalten.");
+    field.focus();
+    return;
+  }
+  field.value = current ? `${current}\n${bookingCalendarInstruction}` : bookingCalendarInstruction;
+  field.focus();
+  showNotice("Booking-Kalender wurde in die Besonderheiten eingefügt.");
 }
 
 function disconnectAnthropic() {
@@ -2698,20 +2713,23 @@ function renderEmailDetail(email) {
       </div>
       <textarea id="draftText">${escapeHtml(draftText)}</textarea>
       <div class="draftTools">
-        <label>
-          <span>Tonalität</span>
-          <select id="draftTone">
-            <option value="professionell">professionell</option>
-            <option value="freundlich">freundlich</option>
-            <option value="kurz">kurz</option>
-            <option value="verbindlich">verbindlich</option>
-          </select>
-        </label>
+        <div class="draftToolsHeader">
+          <label>
+            <span>Tonalität</span>
+            <select id="draftTone">
+              <option value="professionell">professionell</option>
+              <option value="freundlich">freundlich</option>
+              <option value="kurz">kurz</option>
+              <option value="verbindlich">verbindlich</option>
+            </select>
+          </label>
+          <button class="button secondary" type="button" id="addBookingInstructionButton">Booking-Kalender einfügen</button>
+          <button class="button secondary" type="button" id="improveDraftButton">Mit KI neu formulieren</button>
+        </div>
         <label class="draftInstructionsField">
-          <span>Besonderheiten</span>
+          <span>Besonderheiten für die KI</span>
           <textarea id="draftInstructions" rows="3" placeholder="Optional: z. B. Booking-Link nennen, Tagessatz 1.250 EUR netto, Verfügbarkeit ab 15.08., keine Preise nennen"></textarea>
         </label>
-        <button class="button secondary" type="button" id="improveDraftButton">Mit KI neu formulieren</button>
         <span class="draftToneHint">${anthropicApiKey ? "Tonalität und Besonderheiten werden beim nächsten KI-Lauf angewendet." : "Ohne KI-Schlüssel wird der Startentwurf als Fallback angezeigt."}</span>
       </div>
       <div class="actions">
@@ -2773,6 +2791,7 @@ function renderEmailDetail(email) {
   const draftTextarea = detailEl.querySelector("#draftText");
   fitDraftTextarea(draftTextarea);
   draftTextarea?.addEventListener("input", () => fitDraftTextarea(draftTextarea));
+  detailEl.querySelector("#addBookingInstructionButton")?.addEventListener("click", addBookingInstructionToDraft);
   detailEl.querySelector("#improveDraftButton")?.addEventListener("click", () => runKiDraft(email));
   if (!email.isSmartBooking && anthropicApiKey && !cachedKiDraft) {
     window.setTimeout(() => {
