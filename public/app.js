@@ -97,7 +97,8 @@ const taskGroupDescriptions = {
   offen: "Offene Aufgaben ohne direkte Fälligkeit.",
   erledigt: "Abgeschlossene Aufgaben im gewählten Filter."
 };
-const bookingCalendarInstruction = "Bitte auf meinen Booking-Kalender für die Terminbuchung verweisen: https://booking.builtsmart-ai.app/book/profile/metzger-real-estate-advisoryembed=1";
+const bookingCalendarUrl = "https://booking.builtsmart-ai.app/book/profile/metzger-real-estate-advisory?embed=1";
+const bookingCalendarInstruction = `Bitte auf meinen Booking-Kalender für die Terminbuchung verweisen: ${bookingCalendarUrl}`;
 const taskPriorityRank = {
   hoch: 3,
   mittel: 2,
@@ -388,13 +389,40 @@ function setDraftSourceLabel(source = "Startentwurf", state = "fallback") {
   label.className = `draftSourceLabel ${state}`;
 }
 
+function collectDraftInstructions() {
+  const instructions = [];
+  const bookingEnabled = detailEl.querySelector("#useBookingCalendar")?.checked;
+  const dayRateEnabled = detailEl.querySelector("#useDayRate")?.checked;
+  const dayRateInput = detailEl.querySelector("#dayRateAmount");
+  const manualInstructions = detailEl.querySelector("#draftInstructions")?.value.trim();
+
+  if (bookingEnabled) instructions.push(bookingCalendarInstruction);
+  if (dayRateEnabled) {
+    const dayRate = dayRateInput?.value.trim();
+    if (!dayRate) {
+      dayRateInput?.focus();
+      throw new Error("Bitte den Tagessatz eintragen oder die Tagessatz-Option deaktivieren.");
+    }
+    instructions.push(`Bitte Abrechnung nach Tagessatz berücksichtigen. Tagessatz: ${dayRate} EUR netto.`);
+  }
+  if (manualInstructions) instructions.push(manualInstructions);
+
+  return instructions.join("\n");
+}
+
 async function runKiDraft(email, { automatic = false } = {}) {
   const textarea = detailEl.querySelector("#draftText");
   const button = detailEl.querySelector("#improveDraftButton");
   if (!textarea || email.isSmartBooking) return;
 
   const tone = detailEl.querySelector("#draftTone")?.value || "professionell";
-  const replyInstructions = detailEl.querySelector("#draftInstructions")?.value.trim() || "";
+  let replyInstructions = "";
+  try {
+    replyInstructions = collectDraftInstructions();
+  } catch (error) {
+    showNotice(error.message || "Bitte die KI-Vorgaben prüfen.", "error");
+    return;
+  }
   const previousButtonLabel = button?.textContent || "Mit KI neu formulieren";
   if (button) {
     button.disabled = true;
@@ -427,20 +455,6 @@ async function runKiDraft(email, { automatic = false } = {}) {
       button.textContent = previousButtonLabel;
     }
   }
-}
-
-function addBookingInstructionToDraft() {
-  const field = detailEl.querySelector("#draftInstructions");
-  if (!field) return;
-  const current = field.value.trim();
-  if (current.includes(bookingCalendarInstruction)) {
-    showNotice("Der Booking-Kalender ist bereits in den Besonderheiten enthalten.");
-    field.focus();
-    return;
-  }
-  field.value = current ? `${current}\n${bookingCalendarInstruction}` : bookingCalendarInstruction;
-  field.focus();
-  showNotice("Booking-Kalender wurde in die Besonderheiten eingefügt.");
 }
 
 function disconnectAnthropic() {
@@ -2723,12 +2737,30 @@ function renderEmailDetail(email) {
               <option value="verbindlich">verbindlich</option>
             </select>
           </label>
-          <button class="button secondary" type="button" id="addBookingInstructionButton">Booking-Kalender einfügen</button>
           <button class="button secondary" type="button" id="improveDraftButton">Mit KI neu formulieren</button>
         </div>
+        <div class="draftPresetGrid" aria-label="KI-Vorgaben">
+          <label class="draftPresetOption">
+            <input type="checkbox" id="useBookingCalendar">
+            <span>
+              <strong>Booking-Kalender einfügen</strong>
+              <a href="${escapeHtml(bookingCalendarUrl)}" target="_blank" rel="noreferrer">${escapeHtml(bookingCalendarUrl)}</a>
+            </span>
+          </label>
+          <label class="draftPresetOption dayRateOption">
+            <input type="checkbox" id="useDayRate">
+            <span>
+              <strong>Abrechnung nach Tagessatz</strong>
+              <span class="dayRateInputRow">
+                <input id="dayRateAmount" type="number" min="0" step="50" inputmode="decimal" placeholder="z. B. 1250">
+                <span>EUR netto / Tag</span>
+              </span>
+            </span>
+          </label>
+        </div>
         <label class="draftInstructionsField">
-          <span>Besonderheiten für die KI</span>
-          <textarea id="draftInstructions" rows="3" placeholder="Optional: z. B. Booking-Link nennen, Tagessatz 1.250 EUR netto, Verfügbarkeit ab 15.08., keine Preise nennen"></textarea>
+          <span>Weitere Besonderheiten</span>
+          <textarea id="draftInstructions" rows="3" placeholder="Optional: z. B. Verfügbarkeit ab 15.08., keine Preise nennen, nur grundsätzliches Interesse bestätigen"></textarea>
         </label>
         <span class="draftToneHint">${anthropicApiKey ? "Tonalität und Besonderheiten werden beim nächsten KI-Lauf angewendet." : "Ohne KI-Schlüssel wird der Startentwurf als Fallback angezeigt."}</span>
       </div>
@@ -2791,7 +2823,10 @@ function renderEmailDetail(email) {
   const draftTextarea = detailEl.querySelector("#draftText");
   fitDraftTextarea(draftTextarea);
   draftTextarea?.addEventListener("input", () => fitDraftTextarea(draftTextarea));
-  detailEl.querySelector("#addBookingInstructionButton")?.addEventListener("click", addBookingInstructionToDraft);
+  detailEl.querySelector("#dayRateAmount")?.addEventListener("input", () => {
+    const checkbox = detailEl.querySelector("#useDayRate");
+    if (checkbox) checkbox.checked = Boolean(detailEl.querySelector("#dayRateAmount")?.value.trim());
+  });
   detailEl.querySelector("#improveDraftButton")?.addEventListener("click", () => runKiDraft(email));
   if (!email.isSmartBooking && anthropicApiKey && !cachedKiDraft) {
     window.setTimeout(() => {

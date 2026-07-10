@@ -2150,7 +2150,7 @@ body[data-workspace="ki"] .workspaceGuide {
 
 .draftToolsHeader {
   display: grid;
-  grid-template-columns: minmax(250px, 320px) max-content max-content;
+  grid-template-columns: minmax(250px, 320px) max-content;
   gap: 10px;
   align-items: center;
 }
@@ -2179,6 +2179,68 @@ body[data-workspace="ki"] .workspaceGuide {
 
 .draftTools .draftInstructionsField {
   width: 100%;
+}
+
+.draftPresetGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.draftPresetOption {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: flex-start;
+  min-height: 82px;
+  border: 1px solid #cfe1df;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.draftPresetOption input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--teal);
+}
+
+.draftPresetOption strong {
+  display: block;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.draftPresetOption a,
+.draftPresetOption span span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.dayRateInputRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.dayRateInputRow input {
+  width: 130px;
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 7px 9px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 650;
 }
 
 .draftInstructionsField textarea {
@@ -2402,6 +2464,10 @@ body[data-workspace="ki"] .workspaceGuide {
   }
 
   .draftToolsHeader {
+    grid-template-columns: 1fr;
+  }
+
+  .draftPresetGrid {
     grid-template-columns: 1fr;
   }
 
