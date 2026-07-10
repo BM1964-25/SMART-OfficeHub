@@ -822,6 +822,7 @@ async function generateAnthropicReply(body = {}) {
   const email = body.email || {};
   const tone = body.tone || "professionell";
   const currentText = compactForPrompt(body.currentText || "", 2200);
+  const replyInstructions = compactForPrompt(body.replyInstructions || "", 1600);
   const models = await listAnthropicModels(apiKey);
   const model = chooseReplyModel(models);
   const originalMail = compactForPrompt(email.bodyText || email.snippet || "", 8000);
@@ -831,6 +832,7 @@ async function generateAnthropicReply(body = {}) {
     `Erkannte Kategorie: ${email.bucket || "unbekannt"}`,
     `Priorität: ${email.priority || "unbekannt"}`,
     `Gewünschte Tonalität: ${tone}`,
+    `Besonderheiten für den Antwortentwurf: ${replyInstructions || "keine zusätzlichen Besonderheiten angegeben"}`,
     `Bisheriger Entwurf: ${currentText || "kein Entwurf vorhanden"}`,
     `Originalmail: ${originalMail || "kein Mailtext verfügbar"}`
   ].join("\n\n");
@@ -847,6 +849,9 @@ async function generateAnthropicReply(body = {}) {
     "Wenn die Tonalität freundlich gewählt ist, muss der Text sichtbar wärmer sein als eine professionelle Standardantwort.",
     "Wenn die Tonalität professionell gewählt ist, muss der Text sichtbar nüchterner und geschäftlicher sein als eine freundliche Antwort.",
     "Vermeide identische Satzfolgen über verschiedene Tonalitäten hinweg.",
+    "Berücksichtige die angegebenen Besonderheiten für den Antwortentwurf mit hoher Priorität, wenn sie zum Anliegen passen.",
+    "Wenn Besonderheiten einen Booking-Link, Verfügbarkeiten, Tagessätze, Preise, Konditionen oder Ausschlüsse enthalten, baue sie sachlich und passend ein.",
+    "Wenn keine Besonderheiten angegeben sind, erwähne keine Booking-Links, Preise, Tagessätze oder besonderen Konditionen.",
     "Gehe konkret auf Anliegen, Handlungsbedarf, Termine, Rückfragen oder Unterlagen ein.",
     "Wenn die Mail konkrete Termine oder Tage nennt, greife diese ausdrücklich auf und bitte nicht erneut allgemein um Terminvorschläge.",
     "Wenn konkrete Termine genannt sind, aber keine eigene Verfügbarkeit bekannt ist, setze klare Platzhalter wie „[Zeitfenster eintragen]“ statt Zeiten zu erfinden.",

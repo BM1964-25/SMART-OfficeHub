@@ -351,7 +351,7 @@ async function connectAnthropic() {
   await verifyAnthropicConnection("connect");
 }
 
-async function generateKiReply(email, tone, currentText) {
+async function generateKiReply(email, tone, currentText, replyInstructions = "") {
   if (!anthropicApiKey) {
     openApiKeyPanel();
     throw new Error("Bitte zuerst den Anthropic API-Schlüssel speichern und die Verbindung prüfen.");
@@ -363,6 +363,7 @@ async function generateKiReply(email, tone, currentText) {
       apiKey: anthropicApiKey,
       tone,
       currentText,
+      replyInstructions,
       email: {
         from: email.from,
         subject: email.subject,
@@ -392,6 +393,7 @@ async function runKiDraft(email, { automatic = false } = {}) {
   if (!textarea || email.isSmartBooking) return;
 
   const tone = detailEl.querySelector("#draftTone")?.value || "professionell";
+  const replyInstructions = detailEl.querySelector("#draftInstructions")?.value.trim() || "";
   const previousButtonLabel = button?.textContent || "Mit KI neu formulieren";
   if (button) {
     button.disabled = true;
@@ -402,7 +404,7 @@ async function runKiDraft(email, { automatic = false } = {}) {
   if (!automatic) showNotice("Die KI erstellt einen individuellen Antwortentwurf ...");
 
   try {
-    const result = await generateKiReply(email, tone, textarea.value);
+    const result = await generateKiReply(email, tone, textarea.value, replyInstructions);
     textarea.value = result.reply;
     fitDraftTextarea(textarea);
     textarea.dataset.kiBusy = "";
@@ -2705,8 +2707,12 @@ function renderEmailDetail(email) {
             <option value="verbindlich">verbindlich</option>
           </select>
         </label>
+        <label class="draftInstructionsField">
+          <span>Besonderheiten</span>
+          <textarea id="draftInstructions" rows="3" placeholder="Optional: z. B. Booking-Link nennen, Tagessatz 1.250 EUR netto, Verfügbarkeit ab 15.08., keine Preise nennen"></textarea>
+        </label>
         <button class="button secondary" type="button" id="improveDraftButton">Mit KI neu formulieren</button>
-        <span class="draftToneHint">${anthropicApiKey ? "KI-Entwurf wird automatisch erstellt; Tonalität wird angewendet." : "Ohne KI-Schlüssel wird der Startentwurf als Fallback angezeigt."}</span>
+        <span class="draftToneHint">${anthropicApiKey ? "Tonalität und Besonderheiten werden beim nächsten KI-Lauf angewendet." : "Ohne KI-Schlüssel wird der Startentwurf als Fallback angezeigt."}</span>
       </div>
       <div class="actions">
         <button class="button secondary" type="button" id="draftButton">${existingDraftId ? "Entwurf in Gmail aktualisieren" : "Als Entwurf in Gmail übertragen"}</button>

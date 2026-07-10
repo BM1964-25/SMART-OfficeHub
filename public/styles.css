@@ -2174,6 +2174,29 @@ body[data-workspace="ki"] .workspaceGuide {
   font-weight: 500;
 }
 
+.draftTools .draftInstructionsField {
+  grid-column: 1 / -1;
+  grid-template-columns: 112px minmax(260px, 1fr);
+  align-items: start;
+  width: min(720px, 100%);
+}
+
+.draftInstructionsField textarea {
+  min-height: 72px;
+  max-height: 160px;
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
 .draftTools .button {
   white-space: nowrap;
   min-height: 42px;
