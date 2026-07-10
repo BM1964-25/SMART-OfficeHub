@@ -483,10 +483,11 @@ function collectDraftInstructions() {
   return instructions.join("\n");
 }
 
-function selectedBookingCalendarUrl() {
+function selectedBookingCalendarUrl(text = "") {
   const bookingEnabled = detailEl.querySelector("#useBookingCalendar")?.checked;
   const url = detailEl.querySelector("#bookingCalendarUrl")?.value.trim();
-  return bookingEnabled && url ? url : "";
+  const textMentionsBooking = /Buchungskalender|Booking-Kalender|Buchungskreis/i.test(text);
+  return (bookingEnabled || textMentionsBooking) && url ? url : "";
 }
 
 function toVisibleDraftText(text = "") {
@@ -2674,7 +2675,7 @@ async function createDraft(email) {
       to: email.from,
       subject,
       text,
-      bookingCalendarUrl: selectedBookingCalendarUrl(),
+      bookingCalendarUrl: selectedBookingCalendarUrl(text),
       threadId: email.threadId
     })
   });

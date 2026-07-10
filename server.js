@@ -667,12 +667,14 @@ function textToDraftHtml(text = "", bookingCalendarUrl = "") {
     .replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2">$1</a>')
     .replace(/\r?\n/g, "<br>");
 
-  if (/^https?:\/\//i.test(bookingCalendarUrl) && !html.includes("<a ")) {
+  if (/^https?:\/\//i.test(bookingCalendarUrl)) {
     const safeUrl = escapeHtml(bookingCalendarUrl);
-    html = html.replace(
-      /\b(Buchungskalender|Booking-Kalender|Buchungskreis)\b/,
-      `<a href="${safeUrl}">$1</a>`
-    );
+    if (!html.includes(safeUrl)) {
+      html = html.replace(
+        /(Buchungskalender|Booking-Kalender|Buchungskreis)/,
+        `<a href="${safeUrl}">$1</a>`
+      );
+    }
   }
 
   return html;
