@@ -2095,6 +2095,20 @@ body[data-workspace="ki"] .workspaceGuide {
   gap: 12px;
 }
 
+.draftHeaderActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.copyDraftButton {
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
 .draftSourceLabel {
   border-radius: 999px;
   padding: 5px 10px;

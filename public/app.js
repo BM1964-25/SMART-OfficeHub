@@ -194,6 +194,31 @@ function hideNotice() {
   noticeEl.textContent = "";
 }
 
+async function copyTextToClipboard(text) {
+  if (!text.trim()) {
+    showNotice("Der Antwortentwurf ist leer.", "error");
+    return;
+  }
+  try {
+    if (navigator.clipboard?.writeText && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const temp = document.createElement("textarea");
+      temp.value = text;
+      temp.setAttribute("readonly", "");
+      temp.style.position = "fixed";
+      temp.style.left = "-9999px";
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand("copy");
+      temp.remove();
+    }
+    showNotice("Antwortentwurf wurde kopiert.");
+  } catch (error) {
+    showNotice("Antwortentwurf konnte nicht kopiert werden.", "error");
+  }
+}
+
 function iconSvg(name) {
   const icons = {
     mail: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4z"></path><path d="m4 7 8 6 8-6"></path></svg>',
@@ -2727,7 +2752,10 @@ function renderEmailDetail(email) {
     : `<div class="draftBox">
       <div class="draftHeader">
         <label for="draftText"><strong>Antwortentwurf</strong></label>
-        <span class="draftSourceLabel ${draftSourceState}" id="draftSourceLabel">${draftSource}</span>
+        <div class="draftHeaderActions">
+          <span class="draftSourceLabel ${draftSourceState}" id="draftSourceLabel">${draftSource}</span>
+          <button class="button secondary copyDraftButton" type="button" id="copyDraftButton">Text kopieren</button>
+        </div>
       </div>
       <textarea id="draftText">${escapeHtml(draftText)}</textarea>
       <div class="draftTools">
@@ -2843,6 +2871,7 @@ function renderEmailDetail(email) {
   const draftTextarea = detailEl.querySelector("#draftText");
   fitDraftTextarea(draftTextarea);
   draftTextarea?.addEventListener("input", () => fitDraftTextarea(draftTextarea));
+  detailEl.querySelector("#copyDraftButton")?.addEventListener("click", () => copyTextToClipboard(draftTextarea?.value || ""));
   detailEl.querySelector("#dayRateAmount")?.addEventListener("input", () => {
     const checkbox = detailEl.querySelector("#useDayRate");
     if (checkbox) checkbox.checked = Boolean(detailEl.querySelector("#dayRateAmount")?.value.trim());
