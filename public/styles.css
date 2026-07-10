@@ -2287,8 +2287,8 @@ body[data-workspace="ki"] .workspaceGuide {
 
 .bookingUrlRow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 34px;
-  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  gap: 4px;
   align-items: center;
   margin-top: 6px;
 }
@@ -2297,7 +2297,7 @@ body[data-workspace="ki"] .workspaceGuide {
   min-height: 36px;
   border: 1px solid var(--line);
   border-radius: 7px;
-  padding: 7px 9px;
+  padding: 7px 8px;
   color: var(--ink);
   font-size: 12px;
   font-weight: 600;
@@ -2307,7 +2307,7 @@ body[data-workspace="ki"] .workspaceGuide {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
+  width: 32px;
   min-height: 36px;
   border: 1px solid #d7a2a2;
   border-radius: 7px;
