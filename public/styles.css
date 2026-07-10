@@ -2246,18 +2246,18 @@ body[data-workspace="ki"] .workspaceGuide {
 .draftPresetOption {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 10px;
+  gap: 8px;
   align-items: flex-start;
-  min-height: 98px;
+  min-height: 74px;
   border: 1px solid #cfe1df;
   border-radius: 8px;
-  padding: 12px;
+  padding: 10px;
   background: #fff;
   color: var(--ink);
 }
 
 .draftPresetOption.compactPreset {
-  min-height: 98px;
+  min-height: 74px;
 }
 
 .draftPresetOption input[type="checkbox"] {
