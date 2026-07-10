@@ -98,7 +98,7 @@ const taskGroupDescriptions = {
   erledigt: "Abgeschlossene Aufgaben im gewählten Filter."
 };
 const bookingCalendarUrl = "https://booking.builtsmart-ai.app/book/profile/metzger-real-estate-advisory?embed=1";
-const bookingCalendarInstruction = (url) => `Zur Terminvereinbarung nutzen Sie bitte direkt meinen [Buchungskalender](${url}). Dort kann ein passender Termin ausgewählt werden.`;
+const bookingCalendarInstruction = () => "Zur Terminvereinbarung nutzen Sie bitte direkt meinen Buchungskalender. Dort kann ein passender Termin ausgewählt werden.";
 const taskPriorityRank = {
   hoch: 3,
   mittel: 2,
@@ -431,7 +431,7 @@ function collectDraftInstructions() {
       bookingUrlInput?.focus();
       throw new Error("Bitte die URL zum Buchungskalender eintragen oder die Booking-Option deaktivieren.");
     }
-    instructions.push(bookingCalendarInstruction(url));
+    instructions.push(bookingCalendarInstruction());
   }
   if (dayRateEnabled) {
     const dayRate = dayRateInput?.value.trim();
@@ -446,6 +446,16 @@ function collectDraftInstructions() {
   if (manualInstructions) instructions.push(manualInstructions);
 
   return instructions.join("\n");
+}
+
+function selectedBookingCalendarUrl() {
+  const bookingEnabled = detailEl.querySelector("#useBookingCalendar")?.checked;
+  const url = detailEl.querySelector("#bookingCalendarUrl")?.value.trim();
+  return bookingEnabled && url ? url : "";
+}
+
+function toVisibleDraftText(text = "") {
+  return String(text).replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, "$1");
 }
 
 async function runKiDraft(email, { automatic = false } = {}) {
@@ -474,10 +484,11 @@ async function runKiDraft(email, { automatic = false } = {}) {
 
   try {
     const result = await generateKiReply(email, tone, textarea.value, replyInstructions);
-    textarea.value = result.reply;
+    const visibleReply = toVisibleDraftText(result.reply);
+    textarea.value = visibleReply;
     fitDraftTextarea(textarea);
     textarea.dataset.kiBusy = "";
-    autoKiDraftsByEmail.set(email.id, result.reply);
+    autoKiDraftsByEmail.set(email.id, visibleReply);
     setDraftSourceLabel("KI-Entwurf", "success");
     showNotice(`KI-Entwurf wurde erstellt${result.model ? ` (${result.model})` : ""}. Gmail wird erst beim Erstellen oder Aktualisieren geändert.`);
   } catch (error) {
@@ -2595,6 +2606,7 @@ async function createDraft(email) {
       to: email.from,
       subject,
       text,
+      bookingCalendarUrl: selectedBookingCalendarUrl(),
       threadId: email.threadId
     })
   });
