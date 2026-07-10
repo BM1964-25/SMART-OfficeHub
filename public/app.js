@@ -496,7 +496,7 @@ function normalizeUrlInput(value = "") {
 function selectedBookingCalendarUrl(text = "") {
   const bookingEnabled = detailEl.querySelector("#useBookingCalendar")?.checked;
   const inputUrl = normalizeUrlInput(detailEl.querySelector("#bookingCalendarUrl")?.value);
-  const textUrl = String(text).match(/https?:\/\/[^\s)\]]+/i)?.[0] || "";
+  const textUrl = normalizeUrlInput(text);
   const url = inputUrl || textUrl || bookingCalendarUrl;
   const textMentionsBooking = /Buchungskalender|Booking-Kalender|Buchungskreis/i.test(text);
   return (bookingEnabled || textMentionsBooking) && url ? url : "";
@@ -555,14 +555,22 @@ function removeBookingCalendarConflicts(text = "") {
     .trim();
 }
 
+function removeBookingCalendarParagraphs(text = "") {
+  return String(text)
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter((paragraph) => !/(Buchungskalender|Booking-Kalender|Buchungskreis|booking\.builtsmart-ai\.app)/i.test(paragraph))
+    .join("\n\n")
+    .trim();
+}
+
 function applyBookingCalendarSentence(text = "") {
-  const url = selectedBookingCalendarUrl();
+  const url = selectedBookingCalendarUrl(text);
   if (!url) return formatDraftParagraphs(normalizeDraftMarkdown(text));
 
-  const withoutExistingBookingSentence = removeBookingCalendarConflicts(toVisibleDraftText(text))
-    .replace(/[^.\n]*(?:Buchungskalender|Booking-Kalender|Buchungskreis|booking\.builtsmart-ai\.app)[^.\n]*\.?/gi, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  const withoutExistingBookingSentence = removeBookingCalendarParagraphs(
+    removeBookingCalendarConflicts(toVisibleDraftText(text))
+  );
 
   return formatDraftParagraphs(
     normalizeDraftMarkdown(insertBeforeClosingGreeting(withoutExistingBookingSentence, bookingCalendarMarkdownSentence(url)))

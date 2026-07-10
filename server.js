@@ -670,12 +670,25 @@ function normalizeUrlInput(value = "") {
   return (markdownMatch?.[1] || bracketedUrlMatch?.[1] || plainUrlMatch?.[0] || raw).trim();
 }
 
+function normalizeDraftMarkdown(text = "") {
+  let normalized = String(text);
+  for (let index = 0; index < 3; index += 1) {
+    normalized = normalized
+      .replace(
+        /\[([^\]\n]+)\]\(\[(https?:\/\/[^\]\s]+)\]\(https?:\/\/[^)\s]+\)\)/gi,
+        "[$1]($2)"
+      )
+      .replace(
+        /\[([^\]\n]+)\]\(\[?(https?:\/\/[^\]\s)]+)\]?\)/gi,
+        "[$1]($2)"
+      );
+  }
+  return normalized;
+}
+
 function textToDraftHtml(text = "", bookingCalendarUrl = "") {
   const cleanBookingCalendarUrl = normalizeUrlInput(bookingCalendarUrl);
-  const cleanedText = String(text).replace(
-    /\[Buchungskalender\]\(\[(https?:\/\/[^\]\s]+)\]\(https?:\/\/[^)\s]+\)\)/gi,
-    "[Buchungskalender]($1)"
-  );
+  const cleanedText = normalizeDraftMarkdown(text);
   const escaped = escapeHtml(cleanedText);
   let html = escaped
     .replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2">$1</a>')
