@@ -2217,7 +2217,7 @@ body[data-workspace="ki"] .workspaceGuide {
   grid-template-columns: auto minmax(0, 1fr);
   gap: 10px;
   align-items: flex-start;
-  min-height: 82px;
+  min-height: 98px;
   border: 1px solid #cfe1df;
   border-radius: 8px;
   padding: 12px;
@@ -2225,12 +2225,8 @@ body[data-workspace="ki"] .workspaceGuide {
   color: var(--ink);
 }
 
-.draftPresetOption.bookingPresetOption {
-  grid-column: 1 / -1;
-}
-
 .draftPresetOption.compactPreset {
-  min-height: 70px;
+  min-height: 98px;
 }
 
 .draftPresetOption input[type="checkbox"] {
@@ -2260,8 +2256,8 @@ body[data-workspace="ki"] .workspaceGuide {
 
 .bookingUrlRow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 36px;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  gap: 6px;
   align-items: center;
   margin-top: 6px;
 }
@@ -2280,7 +2276,7 @@ body[data-workspace="ki"] .workspaceGuide {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
+  width: 34px;
   min-height: 36px;
   border: 1px solid #d7a2a2;
   border-radius: 7px;
