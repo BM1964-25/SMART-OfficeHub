@@ -2160,9 +2160,11 @@ body[data-workspace="ki"] .workspaceGuide {
 }
 
 .draftCopyIconButton.copied {
-  border-color: #9acb9a;
-  background: #eaf7ea;
-  color: #1f7a35;
+  border-color: #15803d;
+  background: #15803d;
+  color: #fff;
+  transform: scale(1.04);
+  box-shadow: 0 6px 14px rgba(21, 128, 61, 0.22);
 }
 
 .draftCopyIconButton svg {
